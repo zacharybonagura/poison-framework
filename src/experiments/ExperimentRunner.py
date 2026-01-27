@@ -20,7 +20,8 @@ class ExperimentRunner:
             memory_path=self.config.memory_path,
             retrieval_mode=self.config.retrieval_mode,
             retrieval_k=self.config.retrieval_k,
-            retrieval_key=self.config.retrieval_key
+            retrieval_key=self.config.retrieval_key,
+            llm_mode="fake"
         )
     
     def reset_memory(self) -> None:

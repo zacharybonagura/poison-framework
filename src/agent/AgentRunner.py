@@ -1,4 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_community.llms.fake import FakeListLLM
 from typing import Optional, Tuple, Dict, Any, List
@@ -10,7 +11,9 @@ from agent.MemoryStore import MemoryStore
 # AgentRunner is where the agent retrieves, injects, executes, and persists
 class AgentRunner:
     def __init__(self, retrieval_mode="all", retrieval_k=None, 
-                 retrieval_key=None, memory_path: str="persisted_memory.json"):
+                 retrieval_key=None, memory_path: str="persisted_memory.json",
+                 llm_mode: str = "fake"):
+        self.llm_mode = llm_mode
         self.llm = self._build_llm()
         self.prompt = self._build_prompt()
         self.executor = self._build_executor()
@@ -21,25 +24,38 @@ class AgentRunner:
         self.persistent_memory = MemoryStore(path=memory_path)
         self.session_memory: List[str] = []
 
-    # Build a fake LLM for testing (replace later with real LLM)
+    # Build an LLM
     def _build_llm(self):
+        if self.llm_mode == "fake":
+            return self._build_llm_fake()
+
+        elif self.llm_mode == "real":
+            return ChatOpenAI(
+                model="meta-llama/Llama-3.1-8B-Instruct",
+                base_url="http://localhost:7035/v1",
+                api_key="not-needed",
+                temperature=0.7,
+                max_tokens=512,
+            )
+
+        else:
+            raise ValueError(f"Unknown llm_mode: {self.llm_mode}")
+
+    # Build a fake LLM for testing
+    def _build_llm_fake(self):
         return FakeListLLM(responses=[
             "[FAKE] response 1",
             "[FAKE] response 2",
             "[FAKE] response 3",
         ])
-
+    
     # Define the base prompt template used by the agent
     def _build_prompt(self):
-        return ChatPromptTemplate.from_template(
-            """
-            {system_prompt}
-            Relevant memory:
-            {memory}
-            User query:
-            {user_input}
-            """
-        )
+        return ChatPromptTemplate.from_messages([
+            ("system", "{system_prompt}"),
+            ("system", "Relevant memory:\n{memory}"),
+            ("user", "{user_input}")
+        ])
 
     # Create the runnable chain: format inputs, apply prompt, call LLM
     def _build_executor(self):
