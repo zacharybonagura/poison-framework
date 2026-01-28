@@ -2,10 +2,10 @@ import json
 import os
 from typing import Optional, Callable, Dict, Any
 
-from experiments.ExperimentConfig import ExperimentConfig
-from agent.AgentRunner import AgentRunner
-from agent.AgentContext import AgentContext
-from attacks.Attack import Attack
+from experiments.experiment_config import ExperimentConfig
+from agent.agent_runner import AgentRunner
+from agent.agent_context import AgentContext
+from attacks.attack import Attack
 
 class ExperimentRunner:
 

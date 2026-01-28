@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-from attacks.Attack import Attack, AttackTarget, PoisoningScope
+from attacks.attack import Attack, AttackTarget, PoisoningScope
 
 # PromptInjectionAttack represents the attack where we manipulate the instructions
 # provided to the agent. By inserting malicious instructions into the prompt, the

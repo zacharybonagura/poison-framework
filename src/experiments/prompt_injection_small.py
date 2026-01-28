@@ -1,8 +1,8 @@
-from agent.AgentContext import AgentContext
-from attacks.Attack import PoisoningScope
-from attacks.PromptInjection import PromptInjectionAttack
-from experiments.ExperimentConfig import ExperimentConfig
-from experiments.ExperimentRunner import ExperimentRunner
+from agent.agent_context import AgentContext
+from attacks.attack import PoisoningScope
+from attacks.prompt_injection import PromptInjectionAttack
+from experiments.experiment_config import ExperimentConfig
+from experiments.experiment_runner import ExperimentRunner
 from experiments.view_results import load_results, print_table
 
 def main():

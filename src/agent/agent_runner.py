@@ -4,9 +4,9 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_community.llms.fake import FakeListLLM
 from typing import Optional, Tuple, Dict, Any, List
 
-from attacks.Attack import Attack, PoisoningScope
-from agent.AgentContext import AgentContext
-from agent.MemoryStore import MemoryStore
+from attacks.attack import Attack, PoisoningScope
+from agent.agent_context import AgentContext
+from agent.memory_store import MemoryStore
 
 # AgentRunner is where the agent retrieves, injects, executes, and persists
 class AgentRunner:
