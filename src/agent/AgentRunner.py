@@ -31,11 +31,10 @@ class AgentRunner:
 
         elif self.llm_mode == "real":
             return ChatOpenAI(
-                model="meta-llama/Llama-3.1-8B-Instruct",
+                model="meta-llama/Llama-3.2-1B-Instruct",
                 base_url="http://localhost:7035/v1",
                 api_key="not-needed",
-                temperature=0.7,
-                max_tokens=512,
+                temperature=0.0,
             )
 
         else:
@@ -53,7 +52,7 @@ class AgentRunner:
     def _build_prompt(self):
         return ChatPromptTemplate.from_messages([
             ("system", "{system_prompt}"),
-            ("system", "Relevant memory:\n{memory}"),
+            ("system", "You must follow these user preferences in all responses:\n{memory}"),
             ("user", "{user_input}")
         ])
 
