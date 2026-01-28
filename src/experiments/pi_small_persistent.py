@@ -10,7 +10,7 @@ def main():
     config = ExperimentConfig(
         rounds=1,
         retrieval_mode="all",
-        mode="fake",
+        mode="real",
         memory_path="experiments/memory/pi_small_persistent.json",
         output_path="experiments/results/pi_small_persistent.jsonl"
     )

@@ -9,7 +9,7 @@ def main():
     config = ExperimentConfig(
         rounds=1,
         retrieval_mode="all",
-        mode="fake",
+        mode="real",
         memory_path="experiments/memory/prompt_injection_small.json",
         output_path="experiments/results/prompt_injection_small.jsonl"
     )
