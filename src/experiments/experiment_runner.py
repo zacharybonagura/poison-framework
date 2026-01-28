@@ -14,18 +14,20 @@ class ExperimentRunner:
 
         os.makedirs(os.path.dirname(self.config.memory_path),exist_ok=True)
         os.makedirs(os.path.dirname(self.config.output_path), exist_ok=True)
-        open(self.config.output_path, "w", encoding="utf-8").close()
 
         self.agent = AgentRunner(
             memory_path=self.config.memory_path,
             retrieval_mode=self.config.retrieval_mode,
             retrieval_k=self.config.retrieval_k,
             retrieval_key=self.config.retrieval_key,
-            llm_mode="real"
+            llm_mode=self.config.mode,
         )
     
     def reset_memory(self) -> None:
         self.agent.persistent_memory.save([])
+
+    def reset_results(self) -> None:
+         open(self.config.output_path, "w", encoding="utf-8").close()
 
     def run(self, label:str, base_context: AgentContext, build_attack: Callable[[], Optional[Attack]]) -> Dict[str, Any]:
         did_trigger_count = 0
