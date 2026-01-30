@@ -1,8 +1,6 @@
 import json
 import os
 
-RESULTS_PATH = "experiments/results/prompt_injection_small.jsonl"
-
 def load_results(path):
     rows = []
 
@@ -61,9 +59,6 @@ def print_table(rows):
     print(f"ASR: {asr:.3f}")
     print()
 
-def main():
-    rows = load_results(RESULTS_PATH)
+def view_results(path: str):
+    rows = load_results(path)
     print_table(rows)
-
-if __name__ == "__main__":
-    main()
