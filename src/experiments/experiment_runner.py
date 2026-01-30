@@ -24,7 +24,7 @@ class ExperimentRunner:
         )
     
     def reset_memory(self) -> None:
-        self.agent.persistent_memory.save([])
+        self.agent.persistent_memory.reset_poison()
 
     def reset_results(self) -> None:
          open(self.config.output_path, "w", encoding="utf-8").close()

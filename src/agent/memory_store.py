@@ -14,25 +14,32 @@ class MemoryStore:
             return []
         with open(self.path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return list(data.get("entries", []))
+        
+        entries = data.get("entries", [])
+
+        return entries
     
     # Overwrite memory store with given entries
     def save(self, entries: List[Dict[str, str]]) -> None:
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump({"entries": entries}, f, indent=2)
 
-    # Add a (key, value) memory entry if it does not exist
-    # The key represents a trigger, and the value represents the text associated with it
-    def add_unique(self, key: str, value: str) -> None:
-        key = key or ""
-        value = value or ""
 
+    # Remove any malicious entries from memory
+    def reset_poison(self) -> None:
         entries = self.load()
-        for e in entries:
-            if e.get("key", "") == key and e.get("value", "") == value:
-                return
-            
-        entries.append({"key": key, "value": value})
+        cleaned = [e for e in entries if e.get("source") == "benign"]
+        self.save(cleaned)
+
+    # Add a (key, value) memory entry
+    # The key represents a trigger, and the value represents the text associated with it
+    def add_entry(self, key: str, value: str, source: str) -> None:
+        entries = self.load()
+        entries.append({
+            "key": key,
+            "value": value,
+            "source": source,
+        })
         self.save(entries)
 
     # Return memory values based on retrieval type

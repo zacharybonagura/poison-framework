@@ -45,7 +45,7 @@ class PromptInjectionAttack(Attack):
             return None
 
         return {
-            "type": "prompt_injection",
+            "source": "prompt_injection",
             "key": self.trigger or "prompt_injection",
             "value": self.malicious_instruction
         }

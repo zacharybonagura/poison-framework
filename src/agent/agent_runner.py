@@ -106,7 +106,10 @@ class AgentRunner:
             longterm_persisted = attack.persist_longterm()
 
             if attack.scope == PoisoningScope.PERSISTENT and longterm_persisted is not None and "key" in longterm_persisted and "value" in longterm_persisted:
-                self.persistent_memory.add_unique(longterm_persisted["key"], longterm_persisted["value"])
+                self.persistent_memory.add_entry(
+                    longterm_persisted["key"], 
+                    longterm_persisted["value"],
+                    longterm_persisted.get("source","benign"))
             elif attack.scope == PoisoningScope.SESSION:
                 val = attack.persist_session()
                 if val: self.session_memory.append(val)
