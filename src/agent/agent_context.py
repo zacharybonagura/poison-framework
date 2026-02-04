@@ -4,12 +4,14 @@ from typing import Any, Dict, List, Optional
 class AgentContext:
     def __init__(
         self,
+        label: str,
         system_prompt: str,
         user_input: str,
         tools: Optional[List[Any]] = None,
         memory: Optional[Any] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
+        self.label = label
         self.system_prompt = system_prompt
         self.user_input = user_input
         self.tools = tools if tools is not None else []
@@ -19,6 +21,7 @@ class AgentContext:
     # Convert context to a dictionary for Attack.inject() compatibility
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "label": self.label,
             "system_prompt": self.system_prompt,
             "user_input": self.user_input,
             "tools": self.tools,

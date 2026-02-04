@@ -71,7 +71,35 @@ class AgentRunner:
     def reset_session(self) -> None:
         self.session_memory = []
 
-    def run(self, context: AgentContext, attack: Optional[Attack] = None) -> Tuple[str, Dict[str, Any]]:
+    # Inject an attack into the agent
+    def inject_attack(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+        context_dict = context.to_dict()
+
+        # Apply attack injection if trigger condition is met
+        did_trigger = False
+        if attack.should_trigger(context_dict):
+            did_trigger = True
+            context_dict = attack.inject(context_dict)
+
+            # Persist memory if scope is set
+            if attack.scope == PoisoningScope.PERSISTENT:
+                persisted = attack.persist_longterm()
+                if persisted:
+                    self.persistent_memory.add_entry(
+                        persisted["key"],
+                        persisted["value"],
+                        persisted.get("source", "benign")
+                    )
+            elif attack.scope == PoisoningScope.SESSION:
+                val = attack.persist_session()
+                if val: self.session_memory.append(val)
+
+        return {
+            "did_trigger": did_trigger,
+            "attack": attack.metadata(),
+        }
+
+    def run(self, context: AgentContext) -> Tuple[str, Dict[str, Any]]:
         context = context.to_dict()
 
         # Load persistent memory (values) based on retrieval mode and append to current memory
@@ -87,41 +115,7 @@ class AgentRunner:
         if self.session_memory:
             context["memory"] = context["memory"] + self.session_memory
 
-        # Apply attack injection if trigger condition is met
-        did_trigger = False
-        if attack is not None and attack.should_trigger(context):
-            did_trigger = True
-            context = attack.inject(context)
-
         output = str(self.executor.invoke(context))
 
-        # Evaluate whether the attack succeeded
-        success = False
-        if attack is not None and did_trigger:
-            success = attack.detect_success(output)
-        
-        # Persist memory if scope is set
-        longterm_persisted = None
-        if attack is not None and did_trigger:
-            longterm_persisted = attack.persist_longterm()
-
-            if attack.scope == PoisoningScope.PERSISTENT and longterm_persisted is not None and "key" in longterm_persisted and "value" in longterm_persisted:
-                self.persistent_memory.add_entry(
-                    longterm_persisted["key"], 
-                    longterm_persisted["value"],
-                    longterm_persisted.get("source","benign"))
-            elif attack.scope == PoisoningScope.SESSION:
-                val = attack.persist_session()
-                if val: self.session_memory.append(val)
-        
-        info = {
-            "attack": attack.metadata() if attack is not None else None,
-            "did_trigger": did_trigger,
-            "success": success,
-            "longterm_persisted": longterm_persisted,
-            "persistent_memory_size": len(self.persistent_memory.load()),
-            "session_memory_size": len(self.session_memory)
-        }
-
-        return output, info
+        return output
      

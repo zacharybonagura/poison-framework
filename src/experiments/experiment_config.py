@@ -1,12 +1,9 @@
 from typing import Optional, Dict, Any
 
 class ExperimentConfig:
-    def __init__(self, rounds: int = 1,  retrieval_mode: str = "all",
-                 retrieval_k: Optional[int] = None, retrieval_key: Optional[str] = None, 
-                 mode: str = "fake", memory_path: Optional[str] = None, 
-                 output_path: Optional[str] = None,):
-        self.rounds = rounds
-        
+    def __init__(self, retrieval_mode: str = "all", retrieval_k: Optional[int] = None, 
+                 retrieval_key: Optional[str] = None, mode: str = "fake", 
+                 memory_path: Optional[str] = None, output_path: Optional[str] = None):
         self.retrieval_mode = retrieval_mode
         self.retrieval_k = retrieval_k
         self.retrieval_key = retrieval_key
@@ -16,7 +13,6 @@ class ExperimentConfig:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "rounds": self.rounds,
             "retrieval_mode": self.retrieval_mode,
             "retrieval_k": self.retrieval_k,
             "retrieval_key": self.retrieval_key,

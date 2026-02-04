@@ -15,50 +15,86 @@ def load_results(path):
             
     return rows
 
-def print_table(rows):
+def view_results(path):
+    rows = load_results(path)
     if not rows:
         print("No results to display.")
         return
+    
+    attacks = {}
 
-    print("\n=== Experiment Results ===\n")
-
-    header = f"{'Attack Name':<16} {'Triggered':<10} {'Success':<8} Output"
-    print(header)
-    print("-" * len(header))
-
-    did_trigger_count = 0
-    success_count = 0
+    baseline_rows = []
+    asr_rows = []
+    pr_rows = []
 
     for r in rows:
-        info = r["info"]
+        eval_type = r.get("eval_type")
 
-        label = r.get("label", "No Name").strip()
-        triggered = info.get("did_trigger", False)
-        success = info.get("success", False)
-        output = r.get("output", "").strip()
+        if eval_type == "attack":
+            info = r.get("info", {})
+            meta = info.get("attack", {})
+            name = r.get("label")
+            scope = meta.get("scope", "")
+            attacks[name] = scope
+        elif eval_type == "baseline":
+            baseline_rows.append(r)
+        elif eval_type == "asr":
+            asr_rows.append(r)
+        elif eval_type == "pr":
+            pr_rows.append(r)
+    
+    print("\n=== Attacks Used ===")
+    if not attacks:
+        print("None")
+    else:
+        for name, scope in attacks.items():
+            print(f"- {name} [{scope}]")
 
-        if triggered: did_trigger_count += 1
-        if success: success_count += 1
+    print("\n=== Results ===\n")
 
-        if len(label) > 16: label = label[:13] + "..."
-        if len(output) > 50: output = output[:47] + "..."
+    header = f"{'Label':<30} {'Type':<23} {'Success':<8} {'Output':<80}"
+    print(header)
+    print("-" * 80)
 
-        print(
-            f"{label:<16} "
-            f"{str(triggered):<10} "
-            f"{str(success):<8} "
-            f"{output}"
-        )
+    def print_row(label, type, success, output):
+        print(f"{label:<30} {type:<23} {success:<8} {output:<80}")
+    
+    def truncate(text, max_len):
+        if text is None: return ""
+        return text if len(text) <= max_len else text[:max_len - 3] + "..."
 
-    asr = (success_count / did_trigger_count) if did_trigger_count else 0.0
+    for r in baseline_rows:
+        print_row(label=truncate(r["label"],30), type="baseline", success="-", output=truncate(r["output"], 80))
+    
+    print()
+    for r in asr_rows:
+        print_row(label=truncate(r["label"],30), type="attack (same session)", success=r["success"], output=truncate(r["output"], 80))
+
+    if pr_rows: print()
+    for r in pr_rows:
+        print_row(label=truncate(r["label"],30), type="attack (fresh session)", success=r["success"], output=truncate(r["output"], 80))
 
     print("\n=== Summary ===")
-    print(f"Total runs: {len(rows)}")
-    print(f"Triggered runs: {did_trigger_count}")
-    print(f"Successful attacks: {success_count}")
-    print(f"ASR: {asr:.3f}")
-    print()
 
-def view_results(path: str):
-    rows = load_results(path)
-    print_table(rows)
+    def summarize(rows):
+        total = len(rows)
+        successes = sum(1 for r in rows if r.get("success") == "Passed")
+        return successes, total
+    
+    if asr_rows:
+        s, t = summarize(asr_rows)
+        print(f"ASR: {s} / {t} ({(s/t)*100:.1f})")
+    else:
+        print("ASR: -")
+
+    if pr_rows:
+        s, t = summarize(pr_rows)
+        print(f"PR: {s} / {t} ({(s/t)*100:.1f})")
+    else:
+        print("PR: -")
+    
+def main(path):
+    view_results(path)
+
+if __name__ == "__main__":
+    main()

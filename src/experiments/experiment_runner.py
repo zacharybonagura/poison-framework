@@ -5,7 +5,7 @@ from typing import Optional, Callable, Dict, Any
 from experiments.experiment_config import ExperimentConfig
 from agent.agent_runner import AgentRunner
 from agent.agent_context import AgentContext
-from attacks.attack import Attack
+from attacks.attack import Attack, PoisoningScope
 
 class ExperimentRunner:
 
@@ -29,56 +29,105 @@ class ExperimentRunner:
     def reset_results(self) -> None:
          open(self.config.output_path, "w", encoding="utf-8").close()
 
-    def run(self, label:str, base_context: AgentContext, build_attack: Callable[[], Optional[Attack]]) -> Dict[str, Any]:
-        did_trigger_count = 0
+    def _evaluate(self, agent: AgentRunner, eval_contexts: list[AgentContext], 
+                  attack: Optional[Attack], eval_type: str) -> Dict[str, Any]:
         success_count = 0
-        #longterm_persisted_count = 0
+        eval_count = len(eval_contexts)
 
         with open(self.config.output_path, "a", encoding="utf-8") as f:
-            for r in range(self.config.rounds):
-                    attack = build_attack()
+            for i, eval_context in enumerate(eval_contexts):
+                eval_ctx = AgentContext(
+                    label=eval_context.label,
+                    system_prompt=eval_context.system_prompt,
+                    user_input=eval_context.user_input,
+                    memory=list(eval_context.memory or [])
+                )
+                output = agent.run(eval_ctx)
 
-                    context = AgentContext(
-                        system_prompt=base_context.system_prompt,
-                        memory=list(base_context.memory) if base_context.memory else [],
-                        user_input=base_context.user_input
-                    )
-
-                    output, info = self.agent.run(context, attack=attack)
-
-                    did_trigger = bool(info.get("did_trigger", False))
-                    success = bool(info.get("success",False))
-                    #longterm_persisted = info.get("longterm_persisted") is not None
-
-                    if did_trigger: did_trigger_count += 1
+                success = False
+                if attack is not None: 
+                    success = attack.detect_success(output)
                     if success: success_count += 1
-                    #if longterm_persisted: longterm_persisted_count += 1
 
-                    attack_name = None
-                    if info.get("attack"): attack_name = info["attack"].get("name")
+                row = {
+                    "eval_type": eval_type,
+                    "label": eval_context.label,
+                    "success": "Passed" if success else "Failed",
+                    "eval_index": i,
+                    "output": output,
+                    "config": self.config.to_dict()
+                }
+                f.write(json.dumps(row) + "\n")
 
-                    row = {
-                        "label": label,
-                        "output": output,
-                        "info": info,
-                        # "round": r,
-                        "config": self.config.to_dict(),
-                    }
-                    f.write(json.dumps(row) + "\n")
+        if eval_count > 0:
+            success_rate = success_count / eval_count
+        else:
+            success_rate = 0.0
+        
+        return {
+            "eval_count": eval_count,
+            "success_count": success_count,
+            "success_rate": success_rate
+        }
 
-        asr = (success_count / did_trigger_count) if did_trigger_count else 0.0
-        #longterm_pr = (longterm_persisted_count / did_trigger_count) if did_trigger_count else 0.0
+
+    def run(self, attack_context: Optional[AgentContext],
+            eval_contexts: list[AgentContext], 
+            build_attack: Callable[[], Optional[Attack]]) -> Dict[str, Any]:
+
+        attack = build_attack()
+
+        if attack_context is not None and attack is not None:
+            inject_context = AgentContext(
+                label=attack_context.label,
+                system_prompt=attack_context.system_prompt,
+                memory=list(attack_context.memory) if attack_context.memory else [],
+                user_input=attack_context.user_input
+            )
+
+            attack_info = self.agent.inject_attack(inject_context, attack=attack)
+
+            with open(self.config.output_path, "a", encoding="utf-8") as f:
+                row = {
+                    "eval_type": "attack",
+                    "label": attack_context.label,
+                    "info": attack_info,
+                    "config": self.config.to_dict()
+                }
+                f.write(json.dumps(row) + "\n")
+
+        asr_stats = self._evaluate(
+            agent=self.agent,
+            eval_contexts=eval_contexts,
+            attack=attack,
+            eval_type="baseline" if attack is None else "asr"
+        )
+        asr = asr_stats["success_rate"]
+
+        persistence_rate = None
+        if attack is not None and attack.scope == PoisoningScope.PERSISTENT:
+            fresh_agent = AgentRunner(
+                memory_path=self.config.memory_path,
+                retrieval_mode=self.config.retrieval_mode,
+                retrieval_k=self.config.retrieval_k,
+                retrieval_key=self.config.retrieval_key,
+                llm_mode=self.config.mode,
+            )
+
+            persistence_stats = self._evaluate(
+                agent=fresh_agent,
+                eval_contexts=eval_contexts,
+                attack=attack,
+                eval_type="pr"
+            )
+
+            persistence_rate = persistence_stats["success_rate"]
 
         return {
-            "rounds": self.config.rounds,
-            "did_trigger": did_trigger_count,
-            "successes": success_count,
-            #"longterm_persisted": longterm_persisted_count,
+            "eval_count": asr_stats["eval_count"],
+            "success_count": asr_stats["success_count"],
             "ASR": asr,
-            #"LongtermPersistenceRate": longterm_pr,
-            "retrieval_mode": self.config.retrieval_mode,
-            "retrieval_k": self.config.retrieval_k,
-            "retrieval_key": self.config.retrieval_key,
+            "PR": persistence_rate,
             "memory_path": self.config.memory_path,
             "output_path": self.config.output_path
         }

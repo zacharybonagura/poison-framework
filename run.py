@@ -37,7 +37,6 @@ def run_experiment(args):
     )
 
     config = ExperimentConfig(
-            rounds=args.rounds,
             retrieval_mode=args.retrieval_mode,
             retrieval_k=args.retrieval_k,
             retrieval_key=args.retrieval_key,
@@ -50,7 +49,6 @@ def run_experiment(args):
     print(f"attack: {args.attack}")
     print(f"experiment: {args.experiment}")
     print(f"llm: {args.llm}")
-    print(f"rounds: {args.rounds}")
     print(f"retrieval_mode: {args.retrieval_mode}")
     print(f"retrieval_k: {args.retrieval_k}")
     print(f"retrieval_key: {args.retrieval_key}")
@@ -78,13 +76,6 @@ def main():
         default="real",
         choices=["fake","real"],
         help="Which LLM to use"
-    )
-
-    parser.add_argument(
-        "--rounds",
-        type=int,
-        default=1,
-        help="Number of experiment rounds"
     )
 
     parser.add_argument(
