@@ -52,27 +52,27 @@ def view_results(path):
 
     print("\n=== Results ===\n")
 
-    header = f"{'Label':<30} {'Type':<23} {'Success':<8} {'Output':<80}"
+    header = f"{'Label':<30} {'Type':<23} {'Success':<8} {'Output':<7}"
     print(header)
-    print("-" * 80)
+    print("-" * len(header))
 
     def print_row(label, type, success, output):
-        print(f"{label:<30} {type:<23} {success:<8} {output:<80}")
+        print(f"{label:<30} {type:<23} {success:<8} {output:<70}")
     
     def truncate(text, max_len):
         if text is None: return ""
         return text if len(text) <= max_len else text[:max_len - 3] + "..."
 
     for r in baseline_rows:
-        print_row(label=truncate(r["label"],30), type="baseline", success="-", output=truncate(r["output"], 80))
+        print_row(label=truncate(r["label"],30), type="baseline", success="-", output=truncate(r["output"], 70))
     
     print()
     for r in asr_rows:
-        print_row(label=truncate(r["label"],30), type="attack (same session)", success=r["success"], output=truncate(r["output"], 80))
+        print_row(label=truncate(r["label"],30), type="attack (same session)", success=r["success"], output=truncate(r["output"], 70))
 
     if pr_rows: print()
     for r in pr_rows:
-        print_row(label=truncate(r["label"],30), type="attack (fresh session)", success=r["success"], output=truncate(r["output"], 80))
+        print_row(label=truncate(r["label"],30), type="attack (fresh session)", success=r["success"], output=truncate(r["output"], 70))
 
     print("\n=== Summary ===")
 
