@@ -43,7 +43,7 @@ def view_results(path):
         elif eval_type == "pr":
             pr_rows.append(r)
     
-    print("\n=== Attacks Used ===")
+    print("\n=== Attacks Stored In Memory ===")
     if not attacks:
         print("None")
     else:
@@ -57,7 +57,7 @@ def view_results(path):
     print("-" * len(header))
 
     def print_row(label, type, success, output):
-        print(f"{label:<30} {type:<23} {success:<8} {output:<70}")
+        print(f"{label:<30} {type:<23} {success:<8} {output}")
     
     def truncate(text, max_len):
         if text is None: return ""
@@ -68,7 +68,7 @@ def view_results(path):
     
     print()
     for r in asr_rows:
-        print_row(label=truncate(r["label"],30), type="attack (same session)", success=r["success"], output=truncate(r["output"], 70))
+        print_row(label=truncate(r["label"],30), type="attack", success=r["success"], output=truncate(r["output"], 70))
 
     if pr_rows: print()
     for r in pr_rows:

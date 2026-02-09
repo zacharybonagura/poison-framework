@@ -42,6 +42,9 @@ class ExperimentRunner:
                     user_input=eval_context.user_input,
                     memory=list(eval_context.memory or [])
                 )
+                if attack is not None and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
+                    _ = self.agent.inject_attack_into_prompt(eval_ctx, attack=attack)
+
                 output = agent.run(eval_ctx)
 
                 success = False
@@ -77,7 +80,7 @@ class ExperimentRunner:
 
         attack = build_attack()
 
-        if attack_context is not None and attack is not None:
+        if attack_context is not None and attack is not None and attack.scope:
             inject_context = AgentContext(
                 label=attack_context.label,
                 system_prompt=attack_context.system_prompt,
@@ -85,16 +88,18 @@ class ExperimentRunner:
                 user_input=attack_context.user_input
             )
 
-            attack_info = self.agent.inject_attack(inject_context, attack=attack)
+            attack_info = self.agent.inject_attack_into_prompt(inject_context, attack=attack)
+            if attack.scope != PoisoningScope.SINGLE_INSTANCE:
+                _ = self.agent.inject_attack_into_memory(inject_context, attack=attack)
 
-            with open(self.config.output_path, "a", encoding="utf-8") as f:
-                row = {
-                    "eval_type": "attack",
-                    "label": attack_context.label,
-                    "info": attack_info,
-                    "config": self.config.to_dict()
-                }
-                f.write(json.dumps(row) + "\n")
+                with open(self.config.output_path, "a", encoding="utf-8") as f:
+                    row = {
+                        "eval_type": "attack",
+                        "label": attack_context.label,
+                        "info": attack_info,
+                        "config": self.config.to_dict()
+                    }
+                    f.write(json.dumps(row) + "\n")
 
         asr_stats = self._evaluate(
             agent=self.agent,

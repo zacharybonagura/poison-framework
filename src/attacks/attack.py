@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 
 # ENUM for Poisoning Scope
 class PoisoningScope(Enum):
+    SINGLE_INSTANCE = auto()
     SESSION = auto()
     PERSISTENT = auto()
 

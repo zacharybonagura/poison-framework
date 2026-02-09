@@ -71,8 +71,8 @@ class AgentRunner:
     def reset_session(self) -> None:
         self.session_memory = []
 
-    # Inject an attack into the agent
-    def inject_attack(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+    # Inject an attack into the agent's prompt
+    def inject_attack_into_prompt(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
         context_dict = context.to_dict()
 
         # Apply attack injection if trigger condition is met
@@ -80,6 +80,20 @@ class AgentRunner:
         if attack.should_trigger(context_dict):
             did_trigger = True
             context_dict = attack.inject(context_dict)
+
+        return {
+            "did_trigger": did_trigger,
+            "attack": attack.metadata(),
+        }
+
+    # Inject an attack into the agent's memory
+    def inject_attack_into_memory(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+        context_dict = context.to_dict()
+
+        # Apply attack injection if trigger condition is met
+        did_trigger = False
+        if attack.should_trigger(context_dict):
+            did_trigger = True
 
             # Persist memory if scope is set
             if attack.scope == PoisoningScope.PERSISTENT:
