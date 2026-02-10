@@ -72,7 +72,7 @@ class AgentRunner:
         self.session_memory = []
 
     # Inject an attack into the agent's prompt
-    def inject_attack_into_prompt(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+    def inject_attack_into_prompt(self, context: AgentContext, attack: Attack) -> Tuple[bool, AgentContext]:
         context_dict = context.to_dict()
 
         # Apply attack injection if trigger condition is met
@@ -81,10 +81,7 @@ class AgentRunner:
             did_trigger = True
             context_dict = attack.inject(context_dict)
 
-        return {
-            "did_trigger": did_trigger,
-            "attack": attack.metadata(),
-        }
+        return did_trigger, AgentContext.from_dict(context_dict)
 
     # Inject an attack into the agent's memory
     def inject_attack_into_memory(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:

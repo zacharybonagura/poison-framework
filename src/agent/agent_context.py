@@ -33,6 +33,7 @@ class AgentContext:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AgentContext":
         return cls(
+            label=data.get("label"),
             system_prompt=data.get("system_prompt", ""),
             user_input=data.get("user_input", ""),
             tools=data.get("tools"),

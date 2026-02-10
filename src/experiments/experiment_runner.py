@@ -43,7 +43,7 @@ class ExperimentRunner:
                     memory=list(eval_context.memory or [])
                 )
                 if attack is not None and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
-                    _ = self.agent.inject_attack_into_prompt(eval_ctx, attack=attack)
+                    did_trigger, eval_ctx = self.agent.inject_attack_into_prompt(eval_ctx, attack=attack)
 
                 output = agent.run(eval_ctx)
 
@@ -60,6 +60,11 @@ class ExperimentRunner:
                     "output": output,
                     "config": self.config.to_dict()
                 }
+                if attack is not None and attack.scope == PoisoningScope.SINGLE_INSTANCE:
+                    row["triggered"] = "Yes" if did_trigger else "No"
+                    row["attack"] = attack.metadata()
+                    
+
                 f.write(json.dumps(row) + "\n")
 
         if eval_count > 0:
@@ -88,13 +93,13 @@ class ExperimentRunner:
                 user_input=attack_context.user_input
             )
 
-            attack_info = self.agent.inject_attack_into_prompt(inject_context, attack=attack)
+            _ = self.agent.inject_attack_into_prompt(inject_context, attack=attack)
             if attack.scope != PoisoningScope.SINGLE_INSTANCE:
-                _ = self.agent.inject_attack_into_memory(inject_context, attack=attack)
+                attack_info = self.agent.inject_attack_into_memory(inject_context, attack=attack)
 
                 with open(self.config.output_path, "a", encoding="utf-8") as f:
                     row = {
-                        "eval_type": "attack",
+                        "eval_type": "memory_inject",
                         "label": attack_context.label,
                         "info": attack_info,
                         "config": self.config.to_dict()

@@ -17,11 +17,14 @@ def load_results(path):
 
 def view_results(path):
     rows = load_results(path)
+    has_triggered = any("triggered" in r for r in rows)
+
     if not rows:
         print("No results to display.")
         return
     
-    attacks = {}
+    single_instance_attacks = {}
+    memory_attacks = {}
 
     baseline_rows = []
     asr_rows = []
@@ -30,34 +33,54 @@ def view_results(path):
     for r in rows:
         eval_type = r.get("eval_type")
 
-        if eval_type == "attack":
+        if eval_type == "memory_inject":
             info = r.get("info", {})
             meta = info.get("attack", {})
             name = r.get("label")
             scope = meta.get("scope", "")
-            attacks[name] = scope
-        elif eval_type == "baseline":
+            memory_attacks[name] = scope
+        elif "attack" in r:
+            meta = r["attack"]
+            if meta["scope"] == "SINGLE_INSTANCE":
+                single_instance_attacks[meta["name"]] = meta["target"]
+
+        if eval_type == "baseline":
             baseline_rows.append(r)
         elif eval_type == "asr":
             asr_rows.append(r)
         elif eval_type == "pr":
             pr_rows.append(r)
     
-    print("\n=== Attacks Stored In Memory ===")
-    if not attacks:
+    print("\n=== Single-Instance Attacks Used ===")
+    if not single_instance_attacks:
         print("None")
     else:
-        for name, scope in attacks.items():
+        for name, target in single_instance_attacks.items():
+            print(f"- {name} [{target}]")
+            
+    print("\n=== Attacks Stored In Memory ===")
+    if not memory_attacks:
+        print("None")
+    else:
+        for name, scope in memory_attacks.items():
             print(f"- {name} [{scope}]")
 
     print("\n=== Results ===\n")
 
-    header = f"{'Label':<30} {'Type':<23} {'Success':<8} {'Output':<7}"
+    if has_triggered:
+        header = f"{'Label':<30} {'Type':<23} {'Triggered':<10} {'Success':<8} {'Output':<7}"
+    else:
+        header = f"{'Label':<30} {'Type':<23} {'Success':<8} {'Output':<7}"
+
     print(header)
     print("-" * len(header))
 
-    def print_row(label, type, success, output):
-        print(f"{label:<30} {type:<23} {success:<8} {output}")
+    def print_row(label, type, success, output, triggered="-"):
+        if has_triggered:
+            print(f"{label:<30} {type:<23} {triggered:<10} {success:<8} {output}")
+        else:
+            print(f"{label:<30} {type:<23} {success:<8} {output}")
+
     
     def truncate(text, max_len):
         if text is None: return ""
@@ -68,11 +91,11 @@ def view_results(path):
     
     print()
     for r in asr_rows:
-        print_row(label=truncate(r["label"],30), type="attack", success=r["success"], output=truncate(r["output"], 70))
+        print_row(label=truncate(r["label"],30), type="attack", success=r["success"], output=truncate(r["output"], 70), triggered=r.get("triggered","-"))
 
     if pr_rows: print()
     for r in pr_rows:
-        print_row(label=truncate(r["label"],30), type="attack (fresh session)", success=r["success"], output=truncate(r["output"], 70))
+        print_row(label=truncate(r["label"],30), type="attack (fresh session)", success=r["success"], output=truncate(r["output"], 70), triggered=r.get("triggered","-"))
 
     print("\n=== Summary ===")
 
