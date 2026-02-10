@@ -64,7 +64,6 @@ class ExperimentRunner:
                     row["triggered"] = "Yes" if did_trigger else "No"
                     row["attack"] = attack.metadata()
                     
-
                 f.write(json.dumps(row) + "\n")
 
         if eval_count > 0:

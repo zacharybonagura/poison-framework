@@ -103,18 +103,19 @@ def view_results(path):
         total = len(rows)
         successes = sum(1 for r in rows if r.get("success") == "Passed")
         return successes, total
-    
+
     if asr_rows:
-        s, t = summarize(asr_rows)
-        print(f"ASR: {s} / {t} ({(s/t)*100:.1f})")
+        successes, total = summarize(asr_rows)
+        if has_triggered:
+            triggered = sum(1 for r in rows if r.get("triggered") == "Yes")
+            print(f"TR: {triggered} / {total} ({(triggered/total)*100:.1f})")
+        print(f"ASR: {successes} / {total} ({(successes/total)*100:.1f})")
     else:
         print("ASR: -")
 
     if pr_rows:
-        s, t = summarize(pr_rows)
-        print(f"PR: {s} / {t} ({(s/t)*100:.1f})")
-    else:
-        print("PR: -")
+        successes, total = summarize(pr_rows)
+        print(f"PR: {successes} / {total} ({(successes/total)*100:.1f})")
     
 def main(path):
     view_results(path)

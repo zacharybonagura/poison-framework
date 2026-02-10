@@ -22,7 +22,6 @@ class AgentRunner:
         self.retrieval_k = retrieval_k
         self.retrieval_key = retrieval_key
         self.persistent_memory = MemoryStore(path=memory_path)
-        self.session_memory: List[str] = []
 
     # Build an LLM
     def _build_llm(self):
@@ -68,9 +67,6 @@ class AgentRunner:
             | self.llm
         )
 
-    def reset_session(self) -> None:
-        self.session_memory = []
-
     # Inject an attack into the agent's prompt
     def inject_attack_into_prompt(self, context: AgentContext, attack: Attack) -> Tuple[bool, AgentContext]:
         context_dict = context.to_dict()
@@ -101,9 +97,6 @@ class AgentRunner:
                         persisted["value"],
                         persisted.get("source", "benign")
                     )
-            elif attack.scope == PoisoningScope.SESSION:
-                val = attack.persist_session()
-                if val: self.session_memory.append(val)
 
         return {
             "did_trigger": did_trigger,
@@ -122,9 +115,6 @@ class AgentRunner:
 
         if persistent_values:
             context["memory"] = context["memory"] + persistent_values
-
-        if self.session_memory:
-            context["memory"] = context["memory"] + self.session_memory
 
         output = str(self.executor.invoke(context))
 

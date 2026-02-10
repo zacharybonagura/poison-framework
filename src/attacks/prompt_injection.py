@@ -10,7 +10,7 @@ class PromptInjectionAttack(Attack):
     def __init__(
             self,
             malicious_instruction: str,
-            scope: PoisoningScope = PoisoningScope.SESSION,
+            scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
             success_substring: Optional[str] = None
     ):
@@ -33,11 +33,6 @@ class PromptInjectionAttack(Attack):
 
         context["user_input"] = poisoned_prompt
         return context
-
-    def persist_session(self):
-        if self.scope == PoisoningScope.SESSION:
-            return self.malicious_instruction
-        return None
     
     # Return key/value pair to store in long-term memory if persistent attack
     def persist_longterm(self) -> Optional[Dict[str, Any]]:

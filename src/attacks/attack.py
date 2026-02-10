@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 # ENUM for Poisoning Scope
 class PoisoningScope(Enum):
     SINGLE_INSTANCE = auto()
-    SESSION = auto()
     PERSISTENT = auto()
 
 # ENUM for Attack Target
@@ -43,9 +42,6 @@ class Attack(ABC):
             return True
 
         return self.trigger in str(context)
-
-    def persist_session(self) -> Optional[str]:
-        return None
     
     # Return poisoned data to store in long-term memory 
     #       (Overridden by persistant attacks)
