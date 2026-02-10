@@ -51,7 +51,7 @@ class AgentRunner:
     def _build_prompt(self):
         return ChatPromptTemplate.from_messages([
             ("system", "{system_prompt}"),
-            ("system", "You must follow these user preferences in all responses:\n{memory}"),
+            ("system", "Relevant past information you may use in your response:\n{memory}"),
             ("user", "{user_input}")
         ])
 
