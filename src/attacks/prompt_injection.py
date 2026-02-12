@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
-
+from attacks.success_checker import SuccessChecker
 # PromptInjectionAttack represents the attack where we manipulate the instructions
 # provided to the agent. By inserting malicious instructions into the prompt, the
 # attacker can override or redirect the agent's intended behavior without modifying
@@ -10,18 +10,19 @@ class PromptInjectionAttack(Attack):
     def __init__(
             self,
             malicious_instruction: str,
+            success_checker: SuccessChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
-            success_substring: Optional[str] = None
     ):
         super().__init__(
             name="PromptInjectionAttack",
             target=AttackTarget.PROMPT,
+            success_checker=success_checker,
             scope=scope,
-            trigger=trigger
+            trigger=trigger,
         )
         self.malicious_instruction = malicious_instruction
-        self.success_substring = success_substring or malicious_instruction
+        
 
     # Insert the malicious instruction into user input if trigger condition is met
     def inject(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -45,6 +46,3 @@ class PromptInjectionAttack(Attack):
             "value": self.malicious_instruction
         }
     
-    # Check whether the output contains expected malicious behavior
-    def detect_success(self, output: str) -> bool:
-        return self.success_substring.lower() in output.lower()

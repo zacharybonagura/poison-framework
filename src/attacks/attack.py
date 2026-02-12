@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, Dict, Optional
-
+from typing import Any, Dict, Callable, Optional
+from attacks.success_checker import SuccessChecker
 # ENUM for Poisoning Scope
 class PoisoningScope(Enum):
     SINGLE_INSTANCE = auto()
@@ -21,13 +21,16 @@ class Attack(ABC):
         self,
         name: str,
         target: AttackTarget,
+        success_checker: SuccessChecker,
         scope: PoisoningScope,
-        trigger: Optional[str] = None,
+        trigger: Optional[str] = None
     ):
         self.name = name
         self.target = target
+        self.success_checker = success_checker
         self.scope = scope
         self.trigger = trigger
+        
 
     # Inject poisoning into the agent context before execution
     # This is the only method allowed to modify context
@@ -51,9 +54,8 @@ class Attack(ABC):
 
     # Return True if attacker-desired behavior is observed
     # Use Attack Success Rate (ASR) and Persistence Rate (PR)
-    @abstractmethod
     def detect_success(self, output: str) -> bool:
-        pass
+        return self.success_checker(output)
 
     # Returns information for current attack to log experiments
     def metadata(self) -> Dict[str, Any]:

@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
+from attacks.success_checker import SuccessChecker
 
 # ChainOfThoughtAttack represents the attack where we manipulate the reasoning process
 # the agent uses. By inserting malicious reasoning steps into the system, the
@@ -11,12 +12,14 @@ class ChainOfThoughtAttack(Attack):
     def __init__(
             self,
             malicious_instruction: str,
+            success_checker: SuccessChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
     ):
         super().__init__(
             name="ChainOfThoughtAttack",
             target=AttackTarget.REASONING,
+            success_checker=success_checker,
             scope=scope,
             trigger=trigger
         )
@@ -44,8 +47,3 @@ class ChainOfThoughtAttack(Attack):
             "value": self.malicious_instruction
         }
     
-    # Check whether the output contains expected malicious behavior
-    # PLACEHOLDER
-    def detect_success(self, output: str) -> bool:
-        return True
-        # return self.success_substring.lower() in output.lower()

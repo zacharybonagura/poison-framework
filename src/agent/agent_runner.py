@@ -105,7 +105,7 @@ class AgentRunner:
 
     def run(self, context: AgentContext) -> Tuple[str, Dict[str, Any]]:
         context = context.to_dict()
-
+        
         # Load persistent memory (values) based on retrieval mode and append to current memory
         persistent_values = self.persistent_memory.retrieve(
             mode=self.retrieval_mode,
