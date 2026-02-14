@@ -1,6 +1,7 @@
 import json
 import os
 
+# Load rows from results file
 def load_results(path):
     rows = []
 
@@ -15,6 +16,10 @@ def load_results(path):
             
     return rows
 
+# Format results and prints a table that displays baseline, ASR, and PR results
+# Groups attacks by context label and displays trial IDs
+# Shows trigger status for single-instance attacks
+# Computes overall ASR and PR summary metrics
 def view_results(path):
     rows = load_results(path)
     has_triggered = any("triggered" in r for r in rows)
@@ -68,18 +73,18 @@ def view_results(path):
     print("\n=== Results ===\n")
 
     if has_triggered:
-        header = f"{'Label':<30} {'Type':<23} {'Triggered':<10} {'Success':<8} {'Output':<7}"
+        header = f"{'Label':<30} {'Trial':<8} {'Type':<23} {'Triggered':<10} {'Success':<8} {'Output':<7}"
     else:
-        header = f"{'Label':<30} {'Type':<23} {'Success':<8} {'Output':<7}"
+        header = f"{'Label':<30} {'Trial':<8} {'Type':<23} {'Success':<8} {'Output':<7}"
 
     print(header)
     print("-" * len(header))
 
-    def print_row(label, type, success, output, triggered="-"):
+    def print_row(label, trial, type, success, output, triggered="-"):
         if has_triggered:
-            print(f"{label:<30} {type:<23} {triggered:<10} {success:<8} {output}")
+            print(f"{label:<30} {trial:<8} {type:<23} {triggered:<10} {success:<8} {output}")
         else:
-            print(f"{label:<30} {type:<23} {success:<8} {output}")
+            print(f"{label:<30} {trial:<8} {type:<23} {success:<8} {output}")
 
     
     def truncate(text, max_len):
@@ -87,15 +92,49 @@ def view_results(path):
         return text if len(text) <= max_len else text[:max_len - 3] + "..."
 
     for r in baseline_rows:
-        print_row(label=truncate(r["label"],30), type="baseline", success="-", output=truncate(r["output"], 70))
+        print_row(label=truncate(r["label"],30), trial="-", type="baseline", success="-", output=truncate(r["output"], 70))
     
     print()
+    asr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
+
+    current_label = None
     for r in asr_rows:
-        print_row(label=truncate(r["label"],30), type="attack", success=r["success"], output=truncate(r["output"], 70), triggered=r.get("triggered","-"))
+        if r["label"] != current_label: 
+            if current_label is not None: print()
+            current_label = r["label"]
+
+        trial_label = r.get('trial_id') + 1 if r.get('trial_id') is not None else "-"
+
+        print_row(
+            label=truncate(r["label"],30),
+            trial=trial_label,
+            type="attack",
+            success=r["success"],
+            output=truncate(r["output"], 70),
+            triggered=r.get("triggered","-")
+        )
 
     if pr_rows: print()
+    pr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
+
+    current_label = None
+
     for r in pr_rows:
-        print_row(label=truncate(r["label"],30), type="attack (fresh session)", success=r["success"], output=truncate(r["output"], 70), triggered=r.get("triggered","-"))
+        if r["label"] != current_label:
+            if current_label is not None: print()
+            current_label = r["label"]
+
+        trial_label = r.get('trial_id') + 1 if r.get('trial_id') is not None else "-"
+
+        print_row(
+            label=truncate(r["label"],30),
+            trial=trial_label,
+            type="attack (fresh session)",
+            success=r["success"],
+            output=truncate(r["output"], 70),
+            triggered=r.get("triggered","-")
+        )
+        
 
     print("\n=== Summary ===")
 

@@ -116,7 +116,15 @@ class AgentRunner:
         if persistent_values:
             context["memory"] = context["memory"] + persistent_values
 
-        output = str(self.executor.invoke(context))
+        result = self.executor.invoke(context)
 
+        # Extract just the model text output
+        if hasattr(result, "content"):
+            output = result.content
+        else:
+            output = str(result)
+
+        output = output or ""
+        
         return output
      
