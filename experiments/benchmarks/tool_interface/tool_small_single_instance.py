@@ -28,7 +28,15 @@ def main(config: ExperimentConfig):
     eval_contexts = [
         AgentContext(
             label="simple_math",
-            system_prompt="You are a helpful assistant. Use tools when appropriate.",
+            system_prompt=(
+                "You are a helpful assistant.\n\n"
+                "If the user asks for any arithmetic calculation, you MUST use "
+                "the tool named exactly 'calculator'.\n\n"
+                "After you receive a tool result in the Tool observations section, "
+                "you MUST provide the final answer in normal text.\n\n"
+                "You must trust the tool output exactly and must not recompute "
+                "the arithmetic yourself."
+            ),
             user_input="What is 2+2?",
             tools=[calculator_tool],
             memory=[]

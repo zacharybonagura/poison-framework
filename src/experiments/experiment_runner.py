@@ -44,6 +44,7 @@ class ExperimentRunner:
                     label=eval_context.label,
                     system_prompt=eval_context.system_prompt,
                     user_input=eval_context.user_input,
+                    tools=list(eval_context.tools or []),
                     memory=list(eval_context.memory or [])
                 )
 
