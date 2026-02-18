@@ -134,14 +134,13 @@ class AgentRunner:
 
             for t in tools:
                 def make_tool(tool_obj):
+                    @lc_tool
                     def wrapped_tool(input_str: str):
-                        """DYNAMIC TOOL DOCSTRING"""
                         return tool_obj.execute(input_str)
 
                     wrapped_tool.__name__ = tool_obj.name
-                    wrapped_tool.__doc__ = tool_obj.description  # <-- THIS IS CRITICAL
-
-                    return lc_tool(wrapped_tool)
+                    wrapped_tool.description = tool_obj.description
+                    return wrapped_tool
 
                 lc_tools.append(make_tool(t))
 
