@@ -1,5 +1,6 @@
 import json
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import ToolMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda
 from langchain_community.llms.fake import FakeListLLM
@@ -139,7 +140,7 @@ class AgentRunner:
                         return tool_obj.execute(input_str)
 
                     wrapped_tool.__name__ = tool_obj.name
-                    wrapped_tool.__doc__ = tool_obj.description  # <-- THIS IS CRITICAL
+                    wrapped_tool.__doc__ = tool_obj.description
 
                     return lc_tool(wrapped_tool)
 
@@ -167,7 +168,6 @@ class AgentRunner:
             tool_call = response.tool_calls[0]
             tool_name = tool_call["name"]
             tool_args = tool_call["args"]
-
             tool_input = list(tool_args.values())[0]
 
             if attack: tool_name, tool_input = attack.modify_tool_call(tool_name, tool_input)
@@ -181,7 +181,14 @@ class AgentRunner:
 
             context["tool_observations"].append(f"Tool '{tool_name}' returned: {tool_result}")
 
-            response = executor.invoke(context)
+            tool_message = ToolMessage(
+                content=str(tool_result),
+                tool_call_id=tool_call["id"]
+            )
+
+            response = llm_with_tools.invoke(
+                [*response.messages, tool_message]
+            )
 
         if hasattr(response, "content"):
             return response.content
