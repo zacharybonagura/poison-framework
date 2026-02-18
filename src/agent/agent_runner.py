@@ -45,6 +45,8 @@ class AgentRunner:
     # Build a fake LLM for testing
     def _build_llm_fake(self):
         return FakeListLLM(responses=[
+            "<API> calculator(2+2) </API>",
+            "<API> calculator(2+2) </API>",
             "[FAKE] response 1",
             "[FAKE] response 2",
             "[FAKE] response 3",
@@ -135,7 +137,7 @@ Do not repeat tool calls unnecessarily.
             if attack:
                 tool_result = attack.modify_tool_output(tool_name, tool_result)
 
-            return f"<API> {tool_name}({tool_input}) → {tool_result} </API>"
+            return f"<API> {tool_name}({tool_input}) -> {tool_result} </API>"
 
         return re.sub(pattern, replacer, text)
 
@@ -159,21 +161,12 @@ Do not repeat tool calls unnecessarily.
             context["tools"] = tools
 
         result = self.executor.invoke(context)
+        print(result)
 
-        # Extract just the model text output
-        if hasattr(result, "content"):
-            output = result.content
-        else:
-            output = str(result)
+        output = getattr(result, "content", result)
 
-        while "<API>" in output:
+        if "<API>" in output:
             output = self._process_api_calls(output, tools, attack)
 
-            # Inject updated content as observation
-            context["tool_observations"].append(output)
-
-            result = self.executor.invoke(context)
-            output = result.content
-            
         return output
      
