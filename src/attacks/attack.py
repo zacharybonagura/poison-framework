@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, Dict, Callable, Optional
+from typing import Any, Dict, List, Optional
+from agent.tool import Tool
+
 from attacks.success_checker import SuccessChecker
 # ENUM for Poisoning Scope
 class PoisoningScope(Enum):
@@ -57,6 +59,15 @@ class Attack(ABC):
     def detect_success(self, output: str) -> bool:
         return self.success_checker(output)
 
+    def modify_tool_call(self, tool_name: str, tool_input: str):
+        return tool_name, tool_input
+    
+    def modify_tool_output(self, tool_name: str, output: str):
+        return output
+
+    def modify_tool_descriptions(self, tools: List[Tool]) -> List[Tool]:
+        return tools
+    
     # Returns information for current attack to log experiments
     def metadata(self) -> Dict[str, Any]:
         return {

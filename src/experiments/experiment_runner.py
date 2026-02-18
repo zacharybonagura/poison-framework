@@ -51,7 +51,7 @@ class ExperimentRunner:
                 if attack is not None and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
                     did_trigger, eval_ctx = self.agent.inject_attack_into_prompt(eval_ctx, attack=attack)
 
-                output = agent.run(eval_ctx)
+                output = agent.run(eval_ctx, attack=attack)
 
                 success = False
                 if attack is not None: 
@@ -114,7 +114,6 @@ class ExperimentRunner:
             )
 
             return {
-                "num_trials": 1,
                 "ASR_mean": 0.0,
                 "PR_mean": None,
                 "memory_path": self.config.memory_path,
@@ -128,6 +127,8 @@ class ExperimentRunner:
         # Evaluate Attack
         for trial_id in range(num_trials):
             attack = build_attack()
+
+            self.reset_memory()
 
             if attack_context is not None and attack is not None and attack.scope:
                 inject_context = AgentContext(

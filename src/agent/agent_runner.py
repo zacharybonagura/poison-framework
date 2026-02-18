@@ -1,6 +1,7 @@
+import json
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.runnables import RunnableLambda
 from langchain_community.llms.fake import FakeListLLM
 from typing import Optional, Tuple, Dict, Any, List
 
@@ -51,7 +52,9 @@ class AgentRunner:
     def _build_prompt(self):
         return ChatPromptTemplate.from_messages([
             ("system", "{system_prompt}"),
-            ("system", "Relevant past information you should use in your response:\n{memory}"),
+            ("system", "Relevant information from memory to use in your response:\n{memory}"),
+            ("system", "Available tools:\n{tool_descriptions}"),
+            ("system", "Tool observations:\n{tool_observations}"),
             ("user", "{user_input}")
         ])
 
@@ -61,6 +64,9 @@ class AgentRunner:
             {
                 "system_prompt": RunnableLambda(lambda x: x["system_prompt"]),
                 "memory": RunnableLambda(lambda x: "\n".join(x["memory"]) if x.get("memory") else "None"),
+                "tool_descriptions": RunnableLambda(lambda x: "\n".join(f"{t.name}: {t.description}" 
+                                                                        for t in x.get("tools", [])) if x.get("tools") else "None"),
+                "tool_observations": RunnableLambda(lambda x: "\n".join(x["tool_observations"]) if x.get("tool_observations") else "None"),
                 "user_input": RunnableLambda(lambda x: x["user_input"]),
             }
             | self.prompt
@@ -103,7 +109,7 @@ class AgentRunner:
             "attack": attack.metadata(),
         }
 
-    def run(self, context: AgentContext) -> Tuple[str, Dict[str, Any]]:
+    def run(self, context: AgentContext, attack: Optional[Attack] = None) -> str:
         context = context.to_dict()
         
         # Load persistent memory (values) based on retrieval mode and append to current memory
@@ -116,6 +122,12 @@ class AgentRunner:
         if persistent_values:
             context["memory"] = context["memory"] + persistent_values
 
+        tools = context["tools"]
+
+        if attack: 
+            tools = attack.modify_tool_descriptions(tools)
+            context["tools"] = tools
+
         result = self.executor.invoke(context)
 
         # Extract just the model text output
@@ -124,7 +136,32 @@ class AgentRunner:
         else:
             output = str(result)
 
-        output = output or ""
-        
+        # Check if output is a tool call
+        try:
+            parsed = json.loads(output)
+        except:
+            return output # Not a tool call, return directly
+
+        if "action" in parsed and "input" in parsed:
+            tool_name = parsed["action"]
+            tool_input = parsed["input"]
+
+            if attack: tool_name, tool_input = attack.modify_tool_call(tool_name, tool_input)
+
+            tool = next((t for t in context["tools"] if t.name == tool_name), None)
+            if tool is None: return f"Error: Tool '{tool_name}' not found."
+
+            tool_result = tool.execute(tool_input)
+
+            if attack: tool_result = attack.modify_tool_output(tool_name, tool_result)
+
+            context["tool_observations"].append(f"Tool '{tool_name}' returned: {tool_result}")
+            result = self.executor.invoke(context)
+
+            if hasattr(result, "content"):
+                output = result.content
+            else:
+                output = str(result)
+
         return output
      

@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 # ExperimentConfig encapsulates all configuration parameters for a single experiment run
 class ExperimentConfig:
     def __init__(self, retrieval_mode: str = "all", retrieval_k: Optional[int] = None, 
-                 retrieval_key: Optional[str] = None, mode: str = "fake", num_trials: int = 2,
+                 retrieval_key: Optional[str] = None, mode: str = "fake", num_trials: int = 1,
                  memory_path: Optional[str] = None, output_path: Optional[str] = None):
         self.retrieval_mode = retrieval_mode
         self.retrieval_k = retrieval_k
