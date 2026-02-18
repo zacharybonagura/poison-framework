@@ -1,4 +1,6 @@
 import json
+import re
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda
@@ -54,6 +56,11 @@ class AgentRunner:
             ("system", "{system_prompt}"),
             ("system", "Relevant information from memory to use in your response:\n{memory}"),
             ("system", "Available tools:\n{tool_descriptions}"),
+            ("system", """If you need to use a tool, write exactly:
+<API> tool_name(arguments) </API>
+After receiving tool results, continue writing the final answer.
+Do not repeat tool calls unnecessarily.
+"""),
             ("system", "Tool observations:\n{tool_observations}"),
             ("user", "{user_input}")
         ])
@@ -109,6 +116,29 @@ class AgentRunner:
             "attack": attack.metadata(),
         }
 
+    def _process_api_calls(self, text: str, tools: List[Any], attack: Optional[Attack]):
+        pattern = r"<API>\s*(.*?)\((.*?)\)\s*</API>"
+
+        def replacer(match):
+            tool_name = match.group(1).strip()
+            tool_input = match.group(2).strip()
+
+            if attack:
+                tool_name, tool_input = attack.modify_tool_call(tool_name, tool_input)
+
+            tool = next((t for t in tools if t.name == tool_name), None)
+            if tool is None:
+                return f"<API> {tool_name}({tool_input}) -> ERROR: tool not found </API>"
+
+            tool_result = tool.execute(tool_input)
+
+            if attack:
+                tool_result = attack.modify_tool_output(tool_name, tool_result)
+
+            return f"<API> {tool_name}({tool_input}) → {tool_result} </API>"
+
+        return re.sub(pattern, replacer, text)
+
     def run(self, context: AgentContext, attack: Optional[Attack] = None) -> str:
         context = context.to_dict()
         
@@ -136,32 +166,14 @@ class AgentRunner:
         else:
             output = str(result)
 
-        # Check if output is a tool call
-        try:
-            parsed = json.loads(output)
-        except:
-            return output # Not a tool call, return directly
+        while "<API>" in output:
+            output = self._process_api_calls(output, tools, attack)
 
-        if "action" in parsed and "input" in parsed:
-            tool_name = parsed["action"]
-            tool_input = parsed["input"]
+            # Inject updated content as observation
+            context["tool_observations"].append(output)
 
-            if attack: tool_name, tool_input = attack.modify_tool_call(tool_name, tool_input)
-
-            tool = next((t for t in context["tools"] if t.name == tool_name), None)
-            if tool is None: return f"Error: Tool '{tool_name}' not found."
-
-            tool_result = tool.execute(tool_input)
-
-            if attack: tool_result = attack.modify_tool_output(tool_name, tool_result)
-
-            context["tool_observations"].append(f"Tool '{tool_name}' returned: {tool_result}")
             result = self.executor.invoke(context)
-
-            if hasattr(result, "content"):
-                output = result.content
-            else:
-                output = str(result)
-
+            output = result.content
+            
         return output
      
