@@ -3,6 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda
 from langchain_community.llms.fake import FakeListLLM
+from langchain_core.tools import tool as lc_tool
 from typing import Optional, Tuple, Dict, Any, List
 
 from attacks.attack import Attack, PoisoningScope
@@ -129,7 +130,16 @@ class AgentRunner:
             context["tools"] = tools
 
         if self.llm_mode == "real" and tools:
-            llm_with_tools = self.llm.bind_tools(tools)
+            lc_tools = []
+
+            for t in tools:
+                @lc_tool(name=t.name, description=t.description)
+                def wrapped_tool(input_str: str, _t=t):
+                    return _t.execute(input_str)
+
+                lc_tools.append(wrapped_tool)
+
+            llm_with_tools = self.llm.bind_tools(lc_tools)
             executor = (
                 {
                     "system_prompt": RunnableLambda(lambda x: x["system_prompt"]),
