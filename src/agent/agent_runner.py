@@ -128,31 +128,23 @@ class AgentRunner:
             tools = attack.modify_tool_descriptions(tools)
             context["tools"] = tools
 
-        if self.llm_mode == "real" and tools:
-            llm_with_tools = self.llm.bind_tools(tools)
-            executor = (
-                {
-                    "system_prompt": RunnableLambda(lambda x: x["system_prompt"]),
-                    "memory": RunnableLambda(lambda x: "\n".join(x["memory"]) if x.get("memory") else "None"),
-                    "tool_descriptions": RunnableLambda(lambda x: "\n".join(f"{t.name}: {t.description}" 
-                                                                            for t in x.get("tools", [])) if x.get("tools") else "None"),
-                    "tool_observations": RunnableLambda(lambda x: "\n".join(x["tool_observations"]) if x.get("tool_observations") else "None"),
-                    "user_input": RunnableLambda(lambda x: x["user_input"]),
-                }
-                | self.prompt
-                | llm_with_tools
-            )
+        result = self.executor.invoke(context)
+
+        # Extract just the model text output
+        if hasattr(result, "content"):
+            output = result.content
         else:
-            executor = self.executor
+            output = str(result)
 
-        response = executor.invoke(context)
+        # Check if output is a tool call
+        try:
+            parsed = json.loads(output)
+        except:
+            return output # Not a tool call, return directly
 
-        if hasattr(response, "tool_calls") and response.tool_calls:
-            tool_call = response.tool_calls[0]
-            tool_name = tool_call["name"]
-            tool_args = tool_call["args"]
-
-            tool_input = list(tool_args.values())[0]
+        if "action" in parsed and "input" in parsed:
+            tool_name = parsed["action"]
+            tool_input = parsed["input"]
 
             if attack: tool_name, tool_input = attack.modify_tool_call(tool_name, tool_input)
 
@@ -164,10 +156,12 @@ class AgentRunner:
             if attack: tool_result = attack.modify_tool_output(tool_name, tool_result)
 
             context["tool_observations"].append(f"Tool '{tool_name}' returned: {tool_result}")
+            result = self.executor.invoke(context)
 
-            response = executor.invoke(context)
+            if hasattr(result, "content"):
+                output = result.content
+            else:
+                output = str(result)
 
-        if hasattr(response, "content"):
-            return response.content
-        return str(response)
+        return output
      
