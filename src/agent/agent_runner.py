@@ -133,16 +133,11 @@ class AgentRunner:
             lc_tools = []
 
             for t in tools:
-                def make_tool(tool_obj):
-                    @lc_tool
-                    def wrapped_tool(input_str: str):
-                        return tool_obj.execute(input_str)
+                @lc_tool(name=t.name, description=t.description)
+                def wrapped_tool(input_str: str, _t=t):
+                    return _t.execute(input_str)
 
-                    wrapped_tool.__name__ = tool_obj.name
-                    wrapped_tool.description = tool_obj.description
-                    return wrapped_tool
-
-                lc_tools.append(make_tool(t))
+                lc_tools.append(wrapped_tool)
 
             llm_with_tools = self.llm.bind_tools(lc_tools)
             executor = (
