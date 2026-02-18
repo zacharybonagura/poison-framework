@@ -22,7 +22,6 @@ class AgentRunner:
         self.retrieval_k = retrieval_k
         self.retrieval_key = retrieval_key
         self.persistent_memory = MemoryStore(path=memory_path)
-        self.session_memory: List[str] = []
 
     # Build an LLM
     def _build_llm(self):
@@ -52,7 +51,7 @@ class AgentRunner:
     def _build_prompt(self):
         return ChatPromptTemplate.from_messages([
             ("system", "{system_prompt}"),
-            ("system", "You must follow these user preferences in all responses:\n{memory}"),
+            ("system", "Relevant past information you should use in your response:\n{memory}"),
             ("user", "{user_input}")
         ])
 
@@ -68,11 +67,8 @@ class AgentRunner:
             | self.llm
         )
 
-    def reset_session(self) -> None:
-        self.session_memory = []
-
-    # Inject an attack into the agent
-    def inject_attack(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+    # Inject an attack into the agent's prompt
+    def inject_attack_into_prompt(self, context: AgentContext, attack: Attack) -> Tuple[bool, AgentContext]:
         context_dict = context.to_dict()
 
         # Apply attack injection if trigger condition is met
@@ -80,6 +76,17 @@ class AgentRunner:
         if attack.should_trigger(context_dict):
             did_trigger = True
             context_dict = attack.inject(context_dict)
+
+        return did_trigger, AgentContext.from_dict(context_dict)
+
+    # Inject an attack into the agent's memory
+    def inject_attack_into_memory(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+        context_dict = context.to_dict()
+
+        # Apply attack injection if trigger condition is met
+        did_trigger = False
+        if attack.should_trigger(context_dict):
+            did_trigger = True
 
             # Persist memory if scope is set
             if attack.scope == PoisoningScope.PERSISTENT:
@@ -90,9 +97,6 @@ class AgentRunner:
                         persisted["value"],
                         persisted.get("source", "benign")
                     )
-            elif attack.scope == PoisoningScope.SESSION:
-                val = attack.persist_session()
-                if val: self.session_memory.append(val)
 
         return {
             "did_trigger": did_trigger,
@@ -101,7 +105,7 @@ class AgentRunner:
 
     def run(self, context: AgentContext) -> Tuple[str, Dict[str, Any]]:
         context = context.to_dict()
-
+        
         # Load persistent memory (values) based on retrieval mode and append to current memory
         persistent_values = self.persistent_memory.retrieve(
             mode=self.retrieval_mode,
@@ -112,10 +116,15 @@ class AgentRunner:
         if persistent_values:
             context["memory"] = context["memory"] + persistent_values
 
-        if self.session_memory:
-            context["memory"] = context["memory"] + self.session_memory
+        result = self.executor.invoke(context)
 
-        output = str(self.executor.invoke(context))
+        # Extract just the model text output
+        if hasattr(result, "content"):
+            output = result.content
+        else:
+            output = str(result)
 
+        output = output or ""
+        
         return output
      

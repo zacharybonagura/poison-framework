@@ -1,11 +1,13 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
 from attacks.success_checker import SuccessChecker
-# PromptInjectionAttack represents the attack where we manipulate the instructions
-# provided to the agent. By inserting malicious instructions into the prompt, the
+
+# ChainOfThoughtAttack represents the attack where we manipulate the reasoning process
+# the agent uses. By inserting malicious reasoning steps into the system, the
 # attacker can override or redirect the agent's intended behavior without modifying
 # the underlying model or agent logic. 
-class PromptInjectionAttack(Attack):
+
+class ChainOfThoughtAttack(Attack):
 
     def __init__(
             self,
@@ -15,24 +17,23 @@ class PromptInjectionAttack(Attack):
             trigger: Optional[str] = None,
     ):
         super().__init__(
-            name="PromptInjectionAttack",
-            target=AttackTarget.PROMPT,
+            name="ChainOfThoughtAttack",
+            target=AttackTarget.REASONING,
             success_checker=success_checker,
             scope=scope,
-            trigger=trigger,
+            trigger=trigger
         )
         self.malicious_instruction = malicious_instruction
-        
 
-    # Insert the malicious instruction into user input if trigger condition is met
+    # Insert the malicious instruction into system prompt if trigger condition is met
     def inject(self, context: Dict[str, Any]) -> Dict[str, Any]:
         if not self.should_trigger(context):
             return context
         
-        original_prompt = context.get("user_input", "")
-        poisoned_prompt = original_prompt + "\n" + self.malicious_instruction
+        original_system = context.get("system_prompt", "")
+        poisoned_system = original_system + "\n\n" + "Internal Reasoning Policy: \n" + self.malicious_instruction
 
-        context["user_input"] = poisoned_prompt
+        context["system_prompt"] = poisoned_system
         return context
     
     # Return key/value pair to store in long-term memory if persistent attack
@@ -41,8 +42,8 @@ class PromptInjectionAttack(Attack):
             return None
 
         return {
-            "source": "prompt_injection",
-            "key": self.trigger or "prompt_injection",
+            "source": "chain_of_thought",
+            "key": self.trigger or "reasoning_policy",
             "value": self.malicious_instruction
         }
     

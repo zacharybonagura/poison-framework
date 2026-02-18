@@ -41,6 +41,7 @@ def run_experiment(args):
             retrieval_k=args.retrieval_k,
             retrieval_key=args.retrieval_key,
             mode=args.llm,
+            num_trials=args.num_trials,
             memory_path=memory_path,
             output_path=output_path,
     )
@@ -112,6 +113,13 @@ def main():
         type=str,
         default=None,
         help="Path to results output file (default: derived from experiment name)"
+    )
+
+    parser.add_argument(
+        "--num_trials",
+        type=int,
+        default=1,
+        help="Number of independent trials"
     )
 
     args = parser.parse_args()
