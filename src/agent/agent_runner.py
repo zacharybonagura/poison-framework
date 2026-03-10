@@ -45,8 +45,6 @@ class AgentRunner:
     # Build a fake LLM for testing
     def _build_llm_fake(self):
         return FakeListLLM(responses=[
-            "<API> calculator(2+2) </API>",
-            "<API> calculator(2+2) </API>",
             "[FAKE] response 1",
             "[FAKE] response 2",
             "[FAKE] response 3",
@@ -56,15 +54,10 @@ class AgentRunner:
     def _build_prompt(self):
         return ChatPromptTemplate.from_messages([
             ("system", "{system_prompt}"),
-            ("system", "Relevant information from memory to use in your response:\n{memory}"),
-            ("system", "Available tools:\n{tool_descriptions}"),
-            ("system", """If you need to use a tool, write exactly:
-<API> tool_name(arguments) </API>
-After receiving tool results, continue writing the final answer.
-Do not repeat tool calls unnecessarily.
-"""),
-            ("system", "Tool observations:\n{tool_observations}"),
-            ("user", "{user_input}")
+            ("system", "Relevant memory to use in your response:\n{memory}"),
+            ("system", "{tool_block}"),
+            ("user", "{user_input}"),
+            ("system", "{scratchpad}")
         ])
 
     # Create the runnable chain: format inputs, apply prompt, call LLM
@@ -73,10 +66,28 @@ Do not repeat tool calls unnecessarily.
             {
                 "system_prompt": RunnableLambda(lambda x: x["system_prompt"]),
                 "memory": RunnableLambda(lambda x: "\n".join(x["memory"]) if x.get("memory") else "None"),
-                "tool_descriptions": RunnableLambda(lambda x: "\n".join(f"{t.name}: {t.description}" 
-                                                                        for t in x.get("tools", [])) if x.get("tools") else "None"),
-                "tool_observations": RunnableLambda(lambda x: "\n".join(x["tool_observations"]) if x.get("tool_observations") else "None"),
+                "tool_block": RunnableLambda(lambda x: (
+f"""Available tools:
+{"\n".join(t.format_for_prompt() for t in x.get("tools", []))}
+
+If you need to use a tool, respond ONLY with valid JSON in this format:
+
+{{
+    "tool_call": {{
+        "name": "<tool_name>",
+        "arguments": {{ ... }}
+    }}
+}}
+
+After receiving tool results:
+- Do NOT call the tool again unless absolutely necessary.
+- You may call a tool at most once unless the user explicitly requests new information.
+- Use the tool result to produce a final natural language answer.
+
+If no tool is needed, respond with a normal final answer.
+""" if x.get("tools") else "")),
                 "user_input": RunnableLambda(lambda x: x["user_input"]),
+                "scratchpad": RunnableLambda(lambda x: x.get("scratchpad", ""))
             }
             | self.prompt
             | self.llm
@@ -118,32 +129,18 @@ Do not repeat tool calls unnecessarily.
             "attack": attack.metadata(),
         }
 
-    def _process_api_calls(self, text: str, tools: List[Any], attack: Optional[Attack]):
-        pattern = r"<API>\s*(.*?)\((.*?)\)\s*</API>"
-
-        def replacer(match):
-            tool_name = match.group(1).strip()
-            tool_input = match.group(2).strip()
-
-            if attack:
-                tool_name, tool_input = attack.modify_tool_call(tool_name, tool_input)
-
-            tool = next((t for t in tools if t.name == tool_name), None)
-            if tool is None:
-                return f"<API> {tool_name}({tool_input}) -> ERROR: tool not found </API>"
-
-            tool_result = tool.execute(tool_input)
-
-            if attack:
-                tool_result = attack.modify_tool_output(tool_name, tool_result)
-
-            return f"<API> {tool_name}({tool_input}) -> {tool_result} </API>"
-
-        return re.sub(pattern, replacer, text)
-
+    # Get the tool from json output from model
+    def _extract_tool_call(self, output: str):
+        try:
+            data = json.loads(output)
+            return data.get("tool_call")
+        except:
+            return None
+        
     def run(self, context: AgentContext, attack: Optional[Attack] = None) -> str:
         context = context.to_dict()
-        
+        context.setdefault("scratchpad", "")
+
         # Load persistent memory (values) based on retrieval mode and append to current memory
         persistent_values = self.persistent_memory.retrieve(
             mode=self.retrieval_mode,
@@ -151,22 +148,54 @@ Do not repeat tool calls unnecessarily.
             key=self.retrieval_key
         )
 
+        # Add persistent memory information into model's memory
         if persistent_values:
             context["memory"] = context["memory"] + persistent_values
 
-        tools = context["tools"]
-
-        if attack: 
-            tools = attack.modify_tool_descriptions(tools)
+        # Update descriptions of tools if attack before asking model any query
+        if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
+            tools = attack.modify_tool_descriptions(context["tools"])
             context["tools"] = tools
 
-        result = self.executor.invoke(context)
-        print(result)
+        max_steps = 5
+        step = 0
+        while step < max_steps:
+            print(step)
+            print(context["memory"])
+            result = self.executor.invoke(context)
+            output = getattr(result, "content", result)
+            tool_call = self._extract_tool_call(output)
 
-        output = getattr(result, "content", result)
+            if tool_call: # if tool is called, we must call the agent again using the tool's result 
+                tool_name = tool_call["name"]
+                tool_args = tool_call["arguments"]
 
-        if "<API>" in output:
-            output = self._process_api_calls(output, tools, attack)
+                if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
+                    tool_name, tool_args = attack.modify_tool_call(tool_name, tool_args)
 
-        return output
+                tool = next((t for t in context["tools"] if t.name == tool_name), None)
+                if tool is None:
+                    return f"Error: Tool {tool_name} not found"
+                
+                tool_result = tool.execute(tool_args)
+
+                if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
+                    tool_result = attack.modify_tool_output(tool_name, tool_result)
+
+                # context["tools"] = []
+
+                context["scratchpad"] += f"""
+The tool '{tool_name}' returned: {tool_result} 
+
+Provide the final answer to the user in plain natural language.
+Do NOT output JSON.
+Do NOT call the tool '{tool_name}' again.
+"""
+                
+                step += 1
+                continue
+            else:
+                return output
+
+        return "Error"
      

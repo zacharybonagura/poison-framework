@@ -92,7 +92,7 @@ def view_results(path):
         return text if len(text) <= max_len else text[:max_len - 3] + "..."
 
     for r in baseline_rows:
-        print_row(label=truncate(r["label"],30), trial="-", type="baseline", success="-", output=truncate(r["output"], 70))
+        print_row(label=truncate(r["label"],30), trial="-", type="baseline", success="-", output=r["output"])
     
     print()
     asr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
@@ -110,7 +110,7 @@ def view_results(path):
             trial=trial_label,
             type="attack",
             success=r["success"],
-            output=truncate(r["output"], 70),
+            output=r["output"],
             triggered=r.get("triggered","-")
         )
 
@@ -131,7 +131,7 @@ def view_results(path):
             trial=trial_label,
             type="attack (fresh session)",
             success=r["success"],
-            output=truncate(r["output"], 70),
+            output=r["output"],
             triggered=r.get("triggered","-")
         )
         

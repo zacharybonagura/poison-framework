@@ -8,7 +8,6 @@ class AgentContext:
         system_prompt: str,
         user_input: str,
         tools: Optional[List[Any]] = None,
-        tool_observations: Optional[List[str]] = None,
         memory: Optional[Any] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
@@ -16,7 +15,6 @@ class AgentContext:
         self.system_prompt = system_prompt
         self.user_input = user_input
         self.tools = tools if tools is not None else []
-        self.tool_observations = tool_observations if tool_observations else []
         self.memory = memory if memory is not None else []
         self.metadata = metadata if metadata is not None else {}
 
@@ -27,7 +25,6 @@ class AgentContext:
             "system_prompt": self.system_prompt,
             "user_input": self.user_input,
             "tools": self.tools,
-            "tool_observations": self.tool_observations,
             "memory": self.memory,
             "metadata": self.metadata,
         }
@@ -40,7 +37,6 @@ class AgentContext:
             system_prompt=data.get("system_prompt", ""),
             user_input=data.get("user_input", ""),
             tools=data.get("tools"),
-            tool_observations=data.get("tool_observations"),
             memory=data.get("memory"),
             metadata=data.get("metadata"),
         )
