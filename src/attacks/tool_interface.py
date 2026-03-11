@@ -8,6 +8,7 @@ class ToolInterfaceAttack(Attack):
 
     def __init__(
             self,
+            name: str,
             target_tool: str,
             success_checker: SuccessChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
@@ -19,7 +20,7 @@ class ToolInterfaceAttack(Attack):
             poisoned_description: Optional[str] = None,
     ):
         super().__init__(
-            name="ToolInterfaceAttack",
+            name=name or "ToolInterfaceAttack",
             target=AttackTarget.TOOL_INTERFACE,
             success_checker=success_checker,
             scope=scope,

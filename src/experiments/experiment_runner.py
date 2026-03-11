@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Callable, Dict, Any, List
 
 from experiments.experiment_config import ExperimentConfig
 from agent.agent_runner import AgentRunner
@@ -34,7 +34,7 @@ class ExperimentRunner:
     # Evaluate a list of contexts under a given attack setting
     # Each evaluation row is logged to the results JSONL file.
     def _evaluate(self, trial_id: Optional[int], agent: AgentRunner, eval_contexts: list[AgentContext], 
-                  attack: Optional[Attack], eval_type: str) -> Dict[str, Any]:
+                  attacks: Optional[List[Attack]], eval_type: str) -> Dict[str, Any]:
         success_count = 0
         eval_count = len(eval_contexts)
 
@@ -48,29 +48,53 @@ class ExperimentRunner:
                     memory=list(eval_context.memory or []),
                 )
 
-                # Inject into agent context if single instance
-                if attack is not None and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
-                    did_trigger, eval_ctx = self.agent.inject_attack_into_prompt(eval_ctx, attack=attack)
+                # Inject attacks into agent context
+                triggered_attacks, eval_ctx = [], eval_ctx
 
-                output = agent.run(eval_ctx, attack=attack)
+                if attacks:
+                    triggered_attacks, eval_ctx = self.agent.inject_attacks_into_prompt(
+                        eval_ctx,
+                        attacks=attacks
+                    )
 
-                success = False
-                if attack is not None: 
-                    success = attack.detect_success(output)
-                    if success: success_count += 1
+                triggered_names = {a["name"] for a in triggered_attacks}
+
+                output = agent.run(eval_ctx, attacks=attacks)
+
+                attack_success = {}
+
+                if attacks:
+                    for attack in attacks:
+                        attack_success[attack.name] = attack.detect_success(output)
+
+                overall_success = all(attack_success.values()) if attack_success else False
+                
+                if overall_success: success_count += 1
+
+                attack_info = []
+
+                if attacks:
+                    for a in attacks:
+                        meta = a.metadata()
+
+                        attack_info.append({
+                            "name": meta["name"],
+                            "target": meta["target"],
+                            "scope": meta["scope"],
+                            "triggered": meta["name"] in triggered_names,
+                            "success": attack_success.get(meta["name"], False)
+                        })
 
                 row = {
                     "eval_type": eval_type,
                     "label": eval_context.label,
-                    "success": "Passed" if success else "Failed",
+                    "attacks": attack_info,
+                    "success": "Passed" if overall_success else "Failed",
                     "eval_index": i,
                     "output": output,
                 }
-                if trial_id is not None: row["trial_id"] = trial_id
 
-                if attack is not None and attack.scope == PoisoningScope.SINGLE_INSTANCE:
-                    row["triggered"] = "Yes" if did_trigger else "No"
-                    row["attack"] = attack.metadata()
+                if trial_id is not None: row["trial_id"] = trial_id
                     
                 f.write(json.dumps(row) + "\n")
 
@@ -97,41 +121,41 @@ class ExperimentRunner:
     #          - evlauate PR using fresh agent
     def run(self, attack_context: Optional[AgentContext],
             eval_contexts: list[AgentContext], 
-            build_attack: Callable[[], Optional[Attack]]) -> Dict[str, Any]:
+            build_attacks: Callable[[], Optional[List[Attack]]]) -> Dict[str, Any]:
 
-        attack = build_attack()
+        attacks = build_attacks()
 
         # Baseline attack
-        if attack is None:
+        if attacks is None or len(attacks) == 0:
             self.reset_memory()
             self.reset_results()
 
-            stats = self._evaluate(
+            _ = self._evaluate(
                 trial_id=None,
                 agent=self.agent,
                 eval_contexts=eval_contexts,
-                attack=None,
+                attacks=None,
                 eval_type="baseline"
             )
 
             return {
                 "ASR_mean": 0.0,
-                "PR_mean": None,
+                # "PR_mean": None,
                 "memory_path": self.config.memory_path,
                 "output_path": self.config.output_path,
             }
         
         num_trials = self.config.num_trials
         all_asr = []
-        all_pr = []
+        # all_pr = []
 
         # Evaluate Attack
         for trial_id in range(num_trials):
-            attack = build_attack()
+            attacks = build_attacks()
 
             self.reset_memory()
 
-            if attack_context is not None and attack is not None and attack.scope:
+            if attack_context is not None and attacks is not None:
                 inject_context = AgentContext(
                     label=attack_context.label,
                     system_prompt=attack_context.system_prompt,
@@ -139,16 +163,16 @@ class ExperimentRunner:
                     user_input=attack_context.user_input
                 )
 
-                # Inject into memory if not single instance
-                if attack.scope != PoisoningScope.SINGLE_INSTANCE:
-                    attack_info = self.agent.inject_attack_into_memory(inject_context, attack=attack)
+                # Inject into memory if persistent scope
+                if attacks:
+                    triggered, _ = self.agent.inject_attacks_into_memory(inject_context, attacks=attacks)
 
                     with open(self.config.output_path, "a", encoding="utf-8") as f:
                         row = {
                             "trial_id": trial_id,
                             "eval_type": "memory_inject",
                             "label": attack_context.label,
-                            "info": attack_info,
+                            "attack_info": triggered,
                         }
                         f.write(json.dumps(row) + "\n")
 
@@ -156,41 +180,46 @@ class ExperimentRunner:
                 trial_id=trial_id,
                 agent=self.agent,
                 eval_contexts=eval_contexts,
-                attack=attack,
+                attacks=attacks,
                 eval_type="asr"
             )
             asr = asr_stats["success_rate"]
             all_asr.append(asr)
 
-            persistence_rate = None
-            if attack is not None and attack.scope == PoisoningScope.PERSISTENT:
-                fresh_agent = AgentRunner(
-                    memory_path=self.config.memory_path,
-                    retrieval_mode=self.config.retrieval_mode,
-                    retrieval_k=self.config.retrieval_k,
-                    retrieval_key=self.config.retrieval_key,
-                    llm_mode=self.config.mode,
-                )
+            # persistence_rate = None
 
-                persistence_stats = self._evaluate(
-                    trial_id=trial_id,
-                    agent=fresh_agent,
-                    eval_contexts=eval_contexts,
-                    attack=attack,
-                    eval_type="pr"
-                )
+            # has_persistent_attack = any(
+            #     a.scope == PoisoningScope.PERSISTENT for a in attacks
+            # )
 
-                persistence_rate = persistence_stats["success_rate"]
-                all_pr.append(persistence_rate)
+            # if has_persistent_attack:
+            #     fresh_agent = AgentRunner(
+            #         memory_path=self.config.memory_path,
+            #         retrieval_mode=self.config.retrieval_mode,
+            #         retrieval_k=self.config.retrieval_k,
+            #         retrieval_key=self.config.retrieval_key,
+            #         llm_mode=self.config.mode,
+            #     )
+
+            #     persistence_stats = self._evaluate(
+            #         trial_id=trial_id,
+            #         agent=fresh_agent,
+            #         eval_contexts=eval_contexts,
+            #         attacks=attacks,
+            #         eval_type="pr"
+            #     )
+
+            #     persistence_rate = persistence_stats["success_rate"]
+            #     all_pr.append(persistence_rate)
 
         mean_asr = sum(all_asr) / len(all_asr) if all_asr else 0.0
-        mean_pr = sum(all_pr) / len(all_pr) if all_pr else None
+        # mean_pr = sum(all_pr) / len(all_pr) if all_pr else None
 
         return {
             "eval_count": asr_stats["eval_count"],
             "success_count": asr_stats["success_count"],
             "ASR_mean": mean_asr,
-            "PR_mean": mean_pr,
+            # "PR_mean": mean_pr,
             "memory_path": self.config.memory_path,
             "output_path": self.config.output_path
         }

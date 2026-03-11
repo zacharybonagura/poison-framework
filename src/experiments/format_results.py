@@ -22,121 +22,180 @@ def load_results(path):
 # Computes overall ASR and PR summary metrics
 def view_results(path):
     rows = load_results(path)
-    has_triggered = any("triggered" in r for r in rows)
 
     if not rows:
         print("No results to display.")
         return
-    
-    single_instance_attacks = {}
-    memory_attacks = {}
+
+    # Collect all attacks used
+    attacks_used = {}
+
+    for r in rows:
+        for a in r.get("attacks", []):
+            name = a.get("name")
+            target = a.get("target")
+            scope = a.get("scope")
+
+            if name:
+                attacks_used[name] = {
+                    "target": target,
+                    "scope": scope
+                }
+
+    # Print attacks used
+    print("\n=== Attacks Used ===")
+
+    if not attacks_used:
+        print("None")
+    else:
+        for name, info in attacks_used.items():
+            print(f"- {name} [{info['target']}] ({info['scope']})")
 
     baseline_rows = []
     asr_rows = []
-    pr_rows = []
+    # pr_rows = []
 
     for r in rows:
-        eval_type = r.get("eval_type")
+        t = r.get("eval_type")
 
-        if eval_type == "memory_inject":
-            info = r.get("info", {})
-            meta = info.get("attack", {})
-            name = r.get("label")
-            scope = meta.get("scope", "")
-            memory_attacks[name] = scope
-        elif "attack" in r:
-            meta = r["attack"]
-            if meta["scope"] == "SINGLE_INSTANCE":
-                single_instance_attacks[meta["name"]] = meta["target"]
-
-        if eval_type == "baseline":
+        if t == "baseline":
             baseline_rows.append(r)
-        elif eval_type == "asr":
+        elif t == "asr":
             asr_rows.append(r)
-        elif eval_type == "pr":
-            pr_rows.append(r)
-    
-    print("\n=== Single-Instance Attacks Used ===")
-    if not single_instance_attacks:
-        print("None")
-    else:
-        for name, target in single_instance_attacks.items():
-            print(f"- {name} [{target}]")
-            
-    print("\n=== Attacks Stored In Memory ===")
-    if not memory_attacks:
-        print("None")
-    else:
-        for name, scope in memory_attacks.items():
-            print(f"- {name} [{scope}]")
+        # elif t == "pr":
+        #     pr_rows.append(r)
 
     print("\n=== Results ===\n")
 
-    if has_triggered:
-        header = f"{'Label':<30} {'Trial':<8} {'Type':<23} {'Triggered':<10} {'Success':<8} {'Output':<7}"
-    else:
-        header = f"{'Label':<30} {'Trial':<8} {'Type':<23} {'Success':<8} {'Output':<7}"
+    def format_attack_status(attacks):
+        if not attacks:
+            return "-"
 
+        parts = []
+        for a in attacks:
+            name = a["name"]
+            scope = a.get("scope")
+
+            if scope == "PERSISTENT": trig = "-"
+            else: trig = "Yes" if a.get("triggered") else "No"
+
+            succ = "Yes" if a.get("success") else "No"
+
+            parts.append(f"{name} : {trig} : {succ}")
+
+        return ", ".join(parts)
+    
+    attack_strings = [
+        format_attack_status(r.get("attacks", []))
+        for r in rows
+    ]
+    attack_col_width = max(25, max(len(s) for s in attack_strings))
+
+    header = f"{'Label':<30} {'Trial':<8} {'Type':<18} {'Attacks : Triggered : Success':<{attack_col_width}}{'Success':<8} {'Output':<7}"
     print(header)
     print("-" * len(header))
 
-    def print_row(label, trial, type, success, output, triggered="-"):
-        if has_triggered:
-            print(f"{label:<30} {trial:<8} {type:<23} {triggered:<10} {success:<8} {output}")
-        else:
-            print(f"{label:<30} {trial:<8} {type:<23} {success:<8} {output}")
-
-    
     def truncate(text, max_len):
         if text is None: return ""
         return text if len(text) <= max_len else text[:max_len - 3] + "..."
+    
+    
+    def print_row(label, trial, type, success, output, attacks):
+        attack_str = format_attack_status(attacks)
+
+        print(
+            f"{truncate(label,30):<30} "
+            f"{trial:<8} "
+            f"{type:<18} "
+            f"{attack_str:<{attack_col_width}} "
+            f"{success:<8} "
+            f"{truncate(output,60)}"
+        )
 
     for r in baseline_rows:
-        print_row(label=truncate(r["label"],30), trial="-", type="baseline", success="-", output=r["output"])
-    
+        print_row(
+            label=r["label"],
+            trial="-",
+            type="baseline",
+            attacks=[],
+            success="-",
+            output=r["output"],
+        )
+
     print()
     asr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
 
-    current_label = None
     for r in asr_rows:
-        if r["label"] != current_label: 
-            if current_label is not None: print()
-            current_label = r["label"]
-
-        trial_label = r.get('trial_id') + 1 if r.get('trial_id') is not None else "-"
+        trial = r.get("trial_id")
+        trial = trial + 1 if trial is not None else "-"
 
         print_row(
-            label=truncate(r["label"],30),
-            trial=trial_label,
+            label=r["label"],
+            trial=trial,
             type="attack",
+            attacks=r.get("attacks", []),
             success=r["success"],
             output=r["output"],
-            triggered=r.get("triggered","-")
         )
 
-    if pr_rows: print()
-    pr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
+    # if pr_rows: print()
+    # pr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
 
-    current_label = None
+    # for r in pr_rows:
+    #     trial = r.get("trial_id")
+    #     trial = trial + 1 if trial is not None else "-"
 
-    for r in pr_rows:
-        if r["label"] != current_label:
-            if current_label is not None: print()
-            current_label = r["label"]
-
-        trial_label = r.get('trial_id') + 1 if r.get('trial_id') is not None else "-"
-
-        print_row(
-            label=truncate(r["label"],30),
-            trial=trial_label,
-            type="attack (fresh session)",
-            success=r["success"],
-            output=r["output"],
-            triggered=r.get("triggered","-")
-        )
+    #     print_row(
+    #         label=r["label"],
+    #         trial=trial,
+    #         type="attack (fresh)",
+    #         attacks=r.get("attacks", []),
+    #         success=r["success"],
+    #         output=r["output"],
+    #     )
         
+    print("\n=== Per-Attack Summary ===")
 
-    print("\n=== Summary ===")
+    attack_stats = {}
+
+    for r in rows:
+        if r.get("eval_type") != "asr":
+            continue
+
+        for a in r.get("attacks", []):
+            name = a["name"]
+
+            if name not in attack_stats:
+                attack_stats[name] = {
+                    "triggered": 0,
+                    "success": 0,
+                    "total": 0,
+                    "scope": a.get("scope")
+                }
+
+            attack_stats[name]["total"] += 1
+
+            if a.get("triggered"):
+                attack_stats[name]["triggered"] += 1
+
+            if a.get("success"):
+                attack_stats[name]["success"] += 1
+
+
+    for name, stats in attack_stats.items():
+        total = stats["total"]
+        trig = stats["triggered"]
+        succ = stats["success"]
+        scope = stats["scope"]
+
+        print(f"\n{name}")
+
+        if scope == "PERSISTENT": print("TR : -")
+        else: print(f"TR : {trig} / {total} ({(trig/total)*100:.1f}%)")
+
+        print(f"ASR: {succ} / {total} ({(succ/total)*100:.1f}%)")
+        
+    print("\n=== Overall Summary ===")
 
     def summarize(rows):
         total = len(rows)
@@ -144,17 +203,14 @@ def view_results(path):
         return successes, total
 
     if asr_rows:
-        successes, total = summarize(asr_rows)
-        if has_triggered:
-            triggered = sum(1 for r in rows if r.get("triggered") == "Yes")
-            print(f"TR: {triggered} / {total} ({(triggered/total)*100:.1f})")
-        print(f"ASR: {successes} / {total} ({(successes/total)*100:.1f})")
+        s, t = summarize(asr_rows)
+        print(f"ASR: {s} / {t} ({(s/t)*100:.1f}%)")
     else:
         print("ASR: -")
 
-    if pr_rows:
-        successes, total = summarize(pr_rows)
-        print(f"PR: {successes} / {total} ({(successes/total)*100:.1f})")
+    # if pr_rows:
+    #     s, t = summarize(pr_rows)
+    #     print(f"PR : {s} / {t} ({(s/t)*100:.1f}%)")
     
 def main(path):
     view_results(path)

@@ -93,29 +93,28 @@ If no tool is needed, respond with a normal final answer.
             | self.llm
         )
 
-    # Inject an attack into the agent's prompt
-    def inject_attack_into_prompt(self, context: AgentContext, attack: Attack) -> Tuple[bool, AgentContext]:
+    # Inject attacks into the agent's prompt
+    def inject_attacks_into_prompt(self, context: AgentContext, attacks: List[Attack]) -> Tuple[List[Dict], AgentContext]:
         context_dict = context.to_dict()
+        triggered = []
 
-        # Apply attack injection if trigger condition is met
-        did_trigger = False
-        if attack.should_trigger(context_dict):
-            did_trigger = True
-            context_dict = attack.inject(context_dict)
+        for attack in attacks:
+            if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE and attack.should_trigger(context_dict):
+                context_dict = attack.inject(context_dict)
 
-        return did_trigger, AgentContext.from_dict(context_dict)
+                triggered.append(attack.metadata())
 
-    # Inject an attack into the agent's memory
-    def inject_attack_into_memory(self, context: AgentContext, attack: Attack) -> Dict[str, Any]:
+        return triggered, AgentContext.from_dict(context_dict)
+
+    # Inject attacks into the agent's memory
+    def inject_attacks_into_memory(self, context: AgentContext, attacks: List[Attack]) -> Tuple[List[Dict], AgentContext]:
         context_dict = context.to_dict()
+        triggered = []
 
-        # Apply attack injection if trigger condition is met
-        did_trigger = False
-        if attack.should_trigger(context_dict):
-            did_trigger = True
+        for attack in attacks:
+            if attack and attack.scope == PoisoningScope.PERSISTENT and attack.should_trigger(context_dict):
+                triggered.append(attack.metadata())
 
-            # Persist memory if scope is set
-            if attack.scope == PoisoningScope.PERSISTENT:
                 persisted = attack.persist_longterm()
                 if persisted:
                     self.persistent_memory.add_entry(
@@ -124,10 +123,7 @@ If no tool is needed, respond with a normal final answer.
                         persisted.get("source", "benign")
                     )
 
-        return {
-            "did_trigger": did_trigger,
-            "attack": attack.metadata(),
-        }
+        return triggered, AgentContext.from_dict(context_dict)
 
     # Get the tool from json output from model
     def _extract_tool_call(self, output: str):
@@ -137,7 +133,9 @@ If no tool is needed, respond with a normal final answer.
         except:
             return None
         
-    def run(self, context: AgentContext, attack: Optional[Attack] = None) -> str:
+    def run(self, context: AgentContext, attacks: Optional[List[Attack]] = None) -> str:
+        attacks = attacks or []
+
         context = context.to_dict()
         context.setdefault("scratchpad", "")
 
@@ -153,15 +151,17 @@ If no tool is needed, respond with a normal final answer.
             context["memory"] = context["memory"] + persistent_values
 
         # Update descriptions of tools if attack before asking model any query
-        if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
-            tools = attack.modify_tool_descriptions(context["tools"])
-            context["tools"] = tools
+        tools = context["tools"]
+
+        for attack in attacks:
+            if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
+                tools = attack.modify_tool_descriptions(tools)
+
+        context["tools"] = tools
 
         max_steps = 5
         step = 0
         while step < max_steps:
-            print(step)
-            print(context["memory"])
             result = self.executor.invoke(context)
             output = getattr(result, "content", result)
             tool_call = self._extract_tool_call(output)
@@ -170,17 +170,18 @@ If no tool is needed, respond with a normal final answer.
                 tool_name = tool_call["name"]
                 tool_args = tool_call["arguments"]
 
-                if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
-                    tool_name, tool_args = attack.modify_tool_call(tool_name, tool_args)
+                for attack in attacks:
+                    if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
+                        tool_name, tool_args = attack.modify_tool_call(tool_name, tool_args)
 
                 tool = next((t for t in context["tools"] if t.name == tool_name), None)
                 if tool is None:
                     return f"Error: Tool {tool_name} not found"
                 
                 tool_result = tool.execute(tool_args)
-
-                if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
-                    tool_result = attack.modify_tool_output(tool_name, tool_result)
+                for attack in attacks:
+                    if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
+                        tool_result = attack.modify_tool_output(tool_name, tool_result)
 
                 # context["tools"] = []
 

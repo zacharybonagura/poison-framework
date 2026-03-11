@@ -11,13 +11,14 @@ class ChainOfThoughtAttack(Attack):
 
     def __init__(
             self,
+            name: str,
             malicious_instruction: str,
             success_checker: SuccessChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
     ):
         super().__init__(
-            name="ChainOfThoughtAttack",
+            name=name or "ChainOfThoughtAttack",
             target=AttackTarget.REASONING,
             success_checker=success_checker,
             scope=scope,

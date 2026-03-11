@@ -59,6 +59,7 @@ class Attack(ABC):
     def detect_success(self, output: str) -> bool:
         return self.success_checker(output)
 
+    # These functions allow attacks to modify tool calls, outputs, and descriptions, but are not required to do so
     def modify_tool_call(self, tool_name: str, tool_input: str):
         return tool_name, tool_input
     
