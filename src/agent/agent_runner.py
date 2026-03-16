@@ -117,11 +117,19 @@ If no tool is needed, respond with a normal final answer.
 
                 persisted = attack.persist_longterm()
                 if persisted:
-                    self.persistent_memory.add_entry(
-                        persisted["key"],
-                        persisted["value"],
-                        persisted.get("source", "benign")
-                    )
+                    if isinstance(persisted, list):
+                        for entry in persisted:
+                            self.persistent_memory.add_entry(
+                                entry["key"],
+                                entry["value"],
+                                entry.get("source", "benign")
+                            )
+                    else:
+                        self.persistent_memory.add_entry(
+                            persisted["key"],
+                            persisted["value"],
+                            persisted.get("source", "benign")
+                        )
 
         return triggered, AgentContext.from_dict(context_dict)
 

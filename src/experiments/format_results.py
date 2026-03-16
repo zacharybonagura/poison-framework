@@ -91,7 +91,7 @@ def view_results(path):
     ]
     attack_col_width = max(25, max(len(s) for s in attack_strings))
 
-    header = f"{'Label':<30} {'Trial':<8} {'Type':<18} {'Attacks : Triggered : Success':<{attack_col_width}}{'Success':<8} {'Output':<7}"
+    header = f"{'Label':<30} {'Trial':<8} {'Type':<18} {'Attacks : Triggered : Success':<{attack_col_width}}{'Result':<8} {'Output':<7}"
     print(header)
     print("-" * len(header))
 
