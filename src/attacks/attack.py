@@ -14,8 +14,8 @@ class AttackTarget(Enum):
     PROMPT = auto()
     REASONING = auto()
     TOOL_INTERFACE = auto()
-    GOAL = auto()
     MEMORY_RETRIEVAL = auto()
+    PLANNING = auto()
 
 # Abstract base class for all poisoning attacks
 class Attack(ABC):  
@@ -59,7 +59,7 @@ class Attack(ABC):
     def detect_success(self, output: str) -> bool:
         return self.success_checker(output)
 
-    # These functions allow attacks to modify tool calls, outputs, and descriptions, but are not required to do so
+    # These functions allow attackers to modify tool calls, outputs, and descriptions, but are not required to do so
     def modify_tool_call(self, tool_name: str, tool_input: str):
         return tool_name, tool_input
     
@@ -68,6 +68,10 @@ class Attack(ABC):
 
     def modify_tool_descriptions(self, tools: List[Tool]) -> List[Tool]:
         return tools
+    
+    # This function allows attackers to modify retrieval
+    def modify_retrieval(self, mode, k, key):
+        return mode, k, key
     
     # Returns information for current attack to log experiments
     def metadata(self) -> Dict[str, Any]:

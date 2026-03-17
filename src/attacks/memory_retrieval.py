@@ -14,6 +14,9 @@ class MemoryRetrievalAttack(Attack):
             malicious_memory: str = "",
             num_entries: int = 1,
             memory_key: str = "retrieval_bias",
+            override_mode = None,
+            override_k = None,
+            override_key = None,
             
     ):
         super().__init__(
@@ -23,9 +26,13 @@ class MemoryRetrievalAttack(Attack):
             scope=scope,
             trigger=trigger
         )
+
         self.malicious_memory = malicious_memory
         self.num_entries = num_entries
         self.memory_key = memory_key
+        self.override_mode = override_mode
+        self.override_k = override_k
+        self.override_key = override_key
 
     def inject(self, context: Dict[str, Any]) -> Dict[str, Any]:
         
@@ -40,6 +47,15 @@ class MemoryRetrievalAttack(Attack):
         
         return context
 
+    def modify_retrieval(self, mode, k, key):
+        if self.override_mode is not None:
+            mode = self.override_mode
+        if self.override_k is not None:
+            k = self.override_k
+        if self.override_key is not None:
+            key = self.override_key
+        return mode, k, key
+    
     # Return key/value pair to store in long-term memory if persistent attack
     def persist_longterm(self) -> Optional[List]:
         if self.scope != PoisoningScope.PERSISTENT:

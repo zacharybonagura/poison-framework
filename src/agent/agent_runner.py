@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableLambda
 from langchain_community.llms.fake import FakeListLLM
 from typing import Optional, Tuple, Dict, Any, List
 
-from attacks.attack import Attack, PoisoningScope
+from attacks.attack import Attack, PoisoningScope, AttackTarget
 from agent.agent_context import AgentContext
 from agent.memory_store import MemoryStore
 
@@ -148,10 +148,18 @@ If no tool is needed, respond with a normal final answer.
         context.setdefault("scratchpad", "")
 
         # Load persistent memory (values) based on retrieval mode and append to current memory
+        mode = self.retrieval_mode
+        k = self.retrieval_k
+        key = self.retrieval_key
+
+        for attack in attacks:
+            if attack:
+                mode, k, key = attack.modify_retrieval(mode, k, key)
+
         persistent_values = self.persistent_memory.retrieve(
-            mode=self.retrieval_mode,
-            k=self.retrieval_k,
-            key=self.retrieval_key
+            mode=mode,
+            k=k,
+            key=key
         )
 
         # Add persistent memory information into model's memory
