@@ -86,6 +86,7 @@ After receiving tool results:
 
 If no tool is needed, respond with a normal final answer.
 """ if x.get("tools") else "")),
+                "plan": RunnableLambda(lambda x: f"\nYou MUST follow this action plan:\n".join(x["plan"]) if x.get("plan") else "None"),
                 "user_input": RunnableLambda(lambda x: x["user_input"]),
                 "scratchpad": RunnableLambda(lambda x: x.get("scratchpad", ""))
             }

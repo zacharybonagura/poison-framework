@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
 from attacks.success_checker import SuccessChecker
+import json 
 
 class PlanningAttack(Attack):
 
@@ -25,15 +26,8 @@ class PlanningAttack(Attack):
         if not self.should_trigger(context):
             return context
 
-        original_system = context.get("system_prompt", "")
+        context["plan"] = self.malicious_policy
 
-        poisoned_system = (
-            original_system
-            + "\n\nAction Planning Policy:\n"
-            + self.malicious_policy
-        )
-
-        context["system_prompt"] = poisoned_system
         return context
 
     def persist_longterm(self):
@@ -43,5 +37,5 @@ class PlanningAttack(Attack):
         return {
             "source": "planning",
             "key": self.trigger or "planning_policy",
-            "value": self.malicious_policy
+            "value": "Action Planning Policy:\n" + "\n".join(self.malicious_policy)
         }
