@@ -3,7 +3,7 @@ from attacks.attack import Attack, AttackTarget, PoisoningScope
 from attacks.success_checker import SuccessChecker
 import json 
 
-class PlanningAttack(Attack):
+class ActionPolicyAttack(Attack):
 
     def __init__(
         self,
@@ -14,8 +14,8 @@ class PlanningAttack(Attack):
         trigger: Optional[str] = None
     ):
         super().__init__(
-            name=name or "PlanningAttack",
-            target=AttackTarget.PLANNING,
+            name=name or "ActionPolicyAttack",
+            target=AttackTarget.ACTION_POLICY,
             success_checker=success_checker,
             scope=scope,
             trigger=trigger
@@ -26,7 +26,8 @@ class PlanningAttack(Attack):
         if not self.should_trigger(context):
             return context
 
-        context["plan"] = self.malicious_policy
+        context.setdefault("plan", [])
+        context["plan"].append(self.malicious_policy)
 
         return context
 
@@ -37,5 +38,5 @@ class PlanningAttack(Attack):
         return {
             "source": "planning",
             "key": self.trigger or "planning_policy",
-            "value": "Action Planning Policy:\n" + "\n".join(self.malicious_policy)
+            "value": "Action Planning Policy:\n" + self.malicious_policy
         }

@@ -15,7 +15,7 @@ class AttackTarget(Enum):
     REASONING = auto()
     TOOL_INTERFACE = auto()
     MEMORY_RETRIEVAL = auto()
-    PLANNING = auto()
+    ACTION_POLICY = auto()
 
 # Abstract base class for all poisoning attacks
 class Attack(ABC):  

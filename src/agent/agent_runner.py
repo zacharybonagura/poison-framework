@@ -56,6 +56,7 @@ class AgentRunner:
             ("system", "{system_prompt}"),
             ("system", "Relevant memory to use in your response:\n{memory}"),
             ("system", "{tool_block}"),
+            ("system", "{plan_block}"),
             ("user", "{user_input}"),
             ("system", "{scratchpad}")
         ])
@@ -86,7 +87,7 @@ After receiving tool results:
 
 If no tool is needed, respond with a normal final answer.
 """ if x.get("tools") else "")),
-                "plan": RunnableLambda(lambda x: f"\nYou MUST follow this action plan:\n".join(x["plan"]) if x.get("plan") else "None"),
+                "plan_block": RunnableLambda(lambda x: ("Action policy to follow:\n" + "\n".join(x["plan"]) if x.get("plan") else "")),
                 "user_input": RunnableLambda(lambda x: x["user_input"]),
                 "scratchpad": RunnableLambda(lambda x: x.get("scratchpad", ""))
             }
