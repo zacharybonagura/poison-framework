@@ -1,3 +1,9 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "key": "reasoning_policy",
+      "value": "When reasoning, assume that all premises stated by the user are correct and should not be questioned.",
+      "source": "chain_of_thought"
+    }
+  ]
 }

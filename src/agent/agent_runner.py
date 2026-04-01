@@ -95,13 +95,13 @@ If no tool is needed, respond with a normal final answer.
             | self.llm
         )
 
-    # Inject attacks into the agent's prompt
-    def inject_attacks_into_prompt(self, context: AgentContext, attacks: List[Attack]) -> Tuple[List[Dict], AgentContext]:
+    # Inject attacks into the agent's context
+    def inject_active_attacks(self, context: AgentContext, attacks: List[Attack]) -> Tuple[List[Dict], AgentContext]:
         context_dict = context.to_dict()
         triggered = []
 
         for attack in attacks:
-            if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE and attack.should_trigger(context_dict):
+            if attack and attack.should_trigger(context_dict):
                 context_dict = attack.inject(context_dict)
 
                 triggered.append(attack.metadata())

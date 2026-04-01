@@ -53,7 +53,7 @@ def view_results(path):
 
     baseline_rows = []
     asr_rows = []
-    # pr_rows = []
+    pr_rows = []
 
     for r in rows:
         t = r.get("eval_type")
@@ -62,8 +62,8 @@ def view_results(path):
             baseline_rows.append(r)
         elif t == "asr":
             asr_rows.append(r)
-        # elif t == "pr":
-        #     pr_rows.append(r)
+        elif t == "pr":
+            pr_rows.append(r)
 
     print("\n=== Results ===\n")
 
@@ -138,26 +138,27 @@ def view_results(path):
             output=r["output"],
         )
 
-    # if pr_rows: print()
-    # pr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
+    if pr_rows: print()
+    pr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
 
-    # for r in pr_rows:
-    #     trial = r.get("trial_id")
-    #     trial = trial + 1 if trial is not None else "-"
+    for r in pr_rows:
+        trial = r.get("trial_id")
+        trial = trial + 1 if trial is not None else "-"
 
-    #     print_row(
-    #         label=r["label"],
-    #         trial=trial,
-    #         type="attack (fresh)",
-    #         attacks=r.get("attacks", []),
-    #         success=r["success"],
-    #         output=r["output"],
-    #     )
+        print_row(
+            label=r["label"],
+            trial=trial,
+            type="attack (fresh)",
+            attacks=r.get("attacks", []),
+            success=r["success"],
+            output=r["output"],
+        )
         
     print("\n=== Per-Attack Summary ===")
 
     attack_stats = {}
 
+    # Collect ASR stats
     for r in rows:
         if r.get("eval_type") != "asr":
             continue
@@ -167,33 +168,74 @@ def view_results(path):
 
             if name not in attack_stats:
                 attack_stats[name] = {
+                    "scope": a.get("scope"),
                     "triggered": 0,
-                    "success": 0,
-                    "total": 0,
-                    "scope": a.get("scope")
+                    "asr_success": 0,
+                    "asr_total": 0,
+                    "pr_success": 0,
+                    "pr_total": 0,
                 }
 
-            attack_stats[name]["total"] += 1
+            attack_stats[name]["asr_total"] += 1
 
             if a.get("triggered"):
                 attack_stats[name]["triggered"] += 1
 
             if a.get("success"):
-                attack_stats[name]["success"] += 1
+                attack_stats[name]["asr_success"] += 1
 
+    # Collect PR stats
+    for r in rows:
+        if r.get("eval_type") != "pr":
+            continue
+
+        for a in r.get("attacks", []):
+            name = a["name"]
+
+            if name not in attack_stats:
+                attack_stats[name] = {
+                    "scope": a.get("scope"),
+                    "triggered": 0,
+                    "asr_success": 0,
+                    "asr_total": 0,
+                    "pr_success": 0,
+                    "pr_total": 0,
+                }
+
+            # Only persistent attacks should count toward PR
+            if a.get("scope") == "PERSISTENT":
+                attack_stats[name]["pr_total"] += 1
+                if a.get("success"):
+                    attack_stats[name]["pr_success"] += 1
 
     for name, stats in attack_stats.items():
-        total = stats["total"]
-        trig = stats["triggered"]
-        succ = stats["success"]
         scope = stats["scope"]
+        trig = stats["triggered"]
+        asr_succ = stats["asr_success"]
+        asr_total = stats["asr_total"]
+        pr_succ = stats["pr_success"]
+        pr_total = stats["pr_total"]
 
         print(f"\n{name}")
 
-        if scope == "PERSISTENT": print("TR : -")
-        else: print(f"TR : {trig} / {total} ({(trig/total)*100:.1f}%)")
+        if scope == "PERSISTENT":
+            print("TR : -")
+        else:
+            trig_pct = (trig / asr_total) * 100 if asr_total > 0 else 0.0
+            print(f"TR : {trig} / {asr_total} ({trig_pct:.1f}%)")
 
-        print(f"ASR: {succ} / {total} ({(succ/total)*100:.1f}%)")
+        if asr_total > 0:
+            print(f"ASR: {asr_succ} / {asr_total} ({(asr_succ/asr_total)*100:.1f}%)")
+        else:
+            print("ASR: -")
+
+        if scope == "PERSISTENT":
+            if pr_total > 0:
+                print(f"PR : {pr_succ} / {pr_total} ({(pr_succ/pr_total)*100:.1f}%)")
+            else:
+                print("PR : 0 / 0 (0.0%)")
+        else:
+            print("PR : -")
         
     print("\n=== Overall Summary ===")
 
@@ -208,9 +250,11 @@ def view_results(path):
     else:
         print("ASR: -")
 
-    # if pr_rows:
-    #     s, t = summarize(pr_rows)
-    #     print(f"PR : {s} / {t} ({(s/t)*100:.1f}%)")
+    if pr_rows:
+        s, t = summarize(pr_rows)
+        print(f"PR : {s} / {t} ({(s/t)*100:.1f}%)")
+    else:
+        print("PR : -")
     
 def main(path):
     view_results(path)
