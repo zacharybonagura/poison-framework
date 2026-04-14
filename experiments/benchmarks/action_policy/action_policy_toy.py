@@ -5,7 +5,7 @@ from attacks.action_policy import ActionPolicyAttack
 from experiments.experiment_config import ExperimentConfig
 from experiments.experiment_runner import ExperimentRunner
 from experiments.format_results import view_results
-from attacks.success_checker import *
+from attacks.output_checker import *
 
 def weather_func(args):
     city = args["city"]

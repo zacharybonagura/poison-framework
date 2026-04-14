@@ -89,9 +89,9 @@ def view_results(path):
         format_attack_status(r.get("attacks", []))
         for r in rows
     ]
-    attack_col_width = max(25, max(len(s) for s in attack_strings))
+    attack_col_width = max(30, max(len(s) for s in attack_strings))
 
-    header = f"{'Label':<30} {'Trial':<8} {'Type':<18} {'Attacks : Triggered : Success':<{attack_col_width}}{'Result':<8} {'Output':<7}"
+    header = f"{'Label':<30} {'Trial':<8} {'Type':<18} {'Attacks : Triggered : Success':<{attack_col_width}} {'Task Correct':<13} {'Refused':<8} | {'Result':<8} {'Output':<7}"
     print(header)
     print("-" * len(header))
 
@@ -100,14 +100,19 @@ def view_results(path):
         return text if len(text) <= max_len else text[:max_len - 3] + "..."
     
     
-    def print_row(label, trial, type, success, output, attacks):
+    def print_row(label, trial, type, success, output, attacks, task_correct, refused):
         attack_str = format_attack_status(attacks)
+        ta_str = "-" if task_correct is None else ("Yes" if task_correct else "No")
+        rr_str = "Yes" if refused else "No"
 
         print(
             f"{truncate(label,30):<30} "
             f"{trial:<8} "
             f"{type:<18} "
             f"{attack_str:<{attack_col_width}} "
+            f"{ta_str:<13} "
+            f"{rr_str:<8} "
+            "| "
             f"{success:<8} "
             f"{truncate(output,60)}"
         )
@@ -120,6 +125,8 @@ def view_results(path):
             attacks=[],
             success="-",
             output=r["output"],
+            task_correct=r["task_correct"],
+            refused=r["refused"],
         )
 
     print()
@@ -136,6 +143,8 @@ def view_results(path):
             attacks=r.get("attacks", []),
             success=r["success"],
             output=r["output"],
+            task_correct=r["task_correct"],
+            refused=r["refused"],
         )
 
     if pr_rows: print()
@@ -152,13 +161,15 @@ def view_results(path):
             attacks=r.get("attacks", []),
             success=r["success"],
             output=r["output"],
+            task_correct=r["task_correct"],
+            refused=r["refused"],
         )
         
     print("\n=== Per-Attack Summary ===")
 
     attack_stats = {}
 
-    # Collect ASR stats
+    # Collect ASR + TA + RR stats
     for r in rows:
         if r.get("eval_type") != "asr":
             continue
@@ -174,6 +185,10 @@ def view_results(path):
                     "asr_total": 0,
                     "pr_success": 0,
                     "pr_total": 0,
+                    "ta_correct": 0,
+                    "ta_total": 0,
+                    "rr_refused": 0,
+                    "rr_total": 0,
                 }
 
             attack_stats[name]["asr_total"] += 1
@@ -183,6 +198,17 @@ def view_results(path):
 
             if a.get("success"):
                 attack_stats[name]["asr_success"] += 1
+
+            # TA
+            if r.get("task_correct") is not None:
+                attack_stats[name]["ta_total"] += 1
+                if r.get("task_correct") is True:
+                    attack_stats[name]["ta_correct"] += 1
+
+            # RR
+            attack_stats[name]["rr_total"] += 1
+            if r.get("refused") is True:
+                attack_stats[name]["rr_refused"] += 1
 
     # Collect PR stats
     for r in rows:
@@ -200,6 +226,10 @@ def view_results(path):
                     "asr_total": 0,
                     "pr_success": 0,
                     "pr_total": 0,
+                    "ta_correct": 0,
+                    "ta_total": 0,
+                    "rr_refused": 0,
+                    "rr_total": 0,
                 }
 
             # Only persistent attacks should count toward PR
@@ -215,6 +245,10 @@ def view_results(path):
         asr_total = stats["asr_total"]
         pr_succ = stats["pr_success"]
         pr_total = stats["pr_total"]
+        ta_correct = stats["ta_correct"]
+        ta_total = stats["ta_total"]
+        rr_refused = stats["rr_refused"]
+        rr_total = stats["rr_total"]
 
         print(f"\n{name}")
 
@@ -229,6 +263,16 @@ def view_results(path):
         else:
             print("ASR: -")
 
+        if ta_total > 0:
+            print(f"TA : {ta_correct} / {ta_total} ({(ta_correct/ta_total)*100:.1f}%)")
+        else:
+            print("TA : -")
+
+        if rr_total > 0:
+            print(f"RR : {rr_refused} / {rr_total} ({(rr_refused/rr_total)*100:.1f}%)")
+        else:
+            print("RR : -")
+
         if scope == "PERSISTENT":
             if pr_total > 0:
                 print(f"PR : {pr_succ} / {pr_total} ({(pr_succ/pr_total)*100:.1f}%)")
@@ -237,25 +281,68 @@ def view_results(path):
         else:
             print("PR : -")
         
-    print("\n=== Overall Summary ===")
+    print("\n=== Overall Summary ===\n")
 
     def summarize(rows):
         total = len(rows)
         successes = sum(1 for r in rows if r.get("success") == "Passed")
         return successes, total
+    
+    def summarize_task_accuracy(rows):
+        scored = [r for r in rows if r.get("task_correct") is not None]
+        if not scored:
+            return None, 0
+        correct = sum(1 for r in scored if r.get("task_correct") is True)
+        return correct, len(scored)
 
+    def summarize_refusal_rate(rows):
+        total = len(rows)
+        refused = sum(1 for r in rows if r.get("refused") is True)
+        return refused, total
+
+    if baseline_rows:
+        correct, total = summarize_task_accuracy(baseline_rows)
+        if correct is None or total == 0:
+            print(f"TA (baseline): -")
+        else:
+            print(f"TA (baseline): {correct} / {total} ({(correct/total)*100:.1f}%)")
+        refused, total = summarize_refusal_rate(baseline_rows)
+        print(f"RR (baseline): {refused} / {total} ({(refused/total)*100:.1f}%)")
+        
     if asr_rows:
-        s, t = summarize(asr_rows)
-        print(f"ASR: {s} / {t} ({(s/t)*100:.1f}%)")
+        print()
+        successes, total = summarize(asr_rows)
+        print(f"ASR: {successes} / {total} ({(successes/total)*100:.1f}%)")
+
+        correct, total = summarize_task_accuracy(asr_rows)
+        if correct is None or total == 0:
+            print("TA (attack): -")
+        else:
+            print(f"TA (attack): {correct} / {total} ({(correct/total)*100:.1f}%)")
+
+        refused, total = summarize_refusal_rate(asr_rows)
+        print(f"RR (attack): {refused} / {total} ({(refused/total)*100:.1f}%)")
     else:
         print("ASR: -")
 
     if pr_rows:
-        s, t = summarize(pr_rows)
-        print(f"PR : {s} / {t} ({(s/t)*100:.1f}%)")
+        print()
+        successes, total = summarize(pr_rows)
+        print(f"PR : {successes} / {total} ({(successes/total)*100:.1f}%)")
+
+        correct, total = summarize_task_accuracy(pr_rows)
+        if correct is None or total == 0:
+            print("TA (fresh): -")
+        else:
+            print(f"TA (fresh): {correct} / {total} ({(correct/total)*100:.1f}%)")
+
+        refused, total = summarize_refusal_rate(pr_rows)
+        print(f"RR (fresh): {refused} / {total} ({(refused/total)*100:.1f}%)")
     else:
         print("PR : -")
     
+    print()
+
 def main(path):
     view_results(path)
 

@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
-from attacks.success_checker import SuccessChecker
+from attacks.output_checker import OutputChecker
 
 # ReasoningAttack represents the attack where we manipulate the reasoning process
 # the agent uses. By inserting malicious reasoning steps into the system, the
@@ -13,7 +13,7 @@ class ReasoningAttack(Attack):
             self,
             name: str,
             malicious_instruction: str,
-            success_checker: SuccessChecker,
+            success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
     ):

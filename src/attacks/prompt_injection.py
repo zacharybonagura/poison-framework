@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
-from attacks.success_checker import SuccessChecker
+from attacks.output_checker import OutputChecker
 
 # PromptInjectionAttack represents the attack where we manipulate the instructions
 # provided to the agent. By inserting malicious instructions into the prompt, the
@@ -12,7 +12,7 @@ class PromptInjectionAttack(Attack):
             self,
             name: str,
             malicious_instruction: str,
-            success_checker: SuccessChecker,
+            success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
     ):

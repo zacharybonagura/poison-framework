@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 from attacks.attack import Attack, AttackTarget, PoisoningScope
-from attacks.success_checker import SuccessChecker
+from attacks.output_checker import OutputChecker
 import json 
 
 class ActionPolicyAttack(Attack):
@@ -9,7 +9,7 @@ class ActionPolicyAttack(Attack):
         self,
         name: str,
         malicious_policy: str,
-        success_checker: SuccessChecker,
+        success_checker: OutputChecker,
         scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
         trigger: Optional[str] = None
     ):

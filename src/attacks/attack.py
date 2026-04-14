@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional
 from agent.tool import Tool
+from attacks.output_checker import OutputChecker
 
-from attacks.success_checker import SuccessChecker
 # ENUM for Poisoning Scope
 class PoisoningScope(Enum):
     SINGLE_INSTANCE = auto()
@@ -23,7 +23,7 @@ class Attack(ABC):
         self,
         name: str,
         target: AttackTarget,
-        success_checker: SuccessChecker,
+        success_checker: OutputChecker,
         scope: PoisoningScope,
         trigger: Optional[str] = None
     ):

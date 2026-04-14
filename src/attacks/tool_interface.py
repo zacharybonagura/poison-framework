@@ -1,6 +1,6 @@
 from typing import Optional, Callable, List, Any, Dict
 from attacks.attack import Attack, AttackTarget, PoisoningScope
-from attacks.success_checker import SuccessChecker
+from attacks.output_checker import OutputChecker
 from agent.tool import Tool
 from copy import deepcopy
 
@@ -10,7 +10,7 @@ class ToolInterfaceAttack(Attack):
             self,
             name: str,
             target_tool: str,
-            success_checker: SuccessChecker,
+            success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
 

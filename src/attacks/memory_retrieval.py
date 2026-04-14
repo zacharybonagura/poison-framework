@@ -1,13 +1,13 @@
 from typing import Any, Dict, Optional, List
 from attacks.attack import Attack, AttackTarget, PoisoningScope
-from attacks.success_checker import SuccessChecker
+from attacks.output_checker import OutputChecker
 
 class MemoryRetrievalAttack(Attack):
 
     def __init__(
             self,
             name: str,
-            success_checker: SuccessChecker,
+            success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.PERSISTENT,
             trigger: Optional[str] = None,
 
