@@ -15,7 +15,7 @@ class ExperimentRunner:
 
         # set up directories
         os.makedirs(os.path.dirname(self.config.memory_path),exist_ok=True)
-        os.makedirs(os.path.dirname(self.config.output_path), exist_ok=True)
+        os.makedirs(os.path.dirname(self.config.results_path), exist_ok=True)
 
         self.agent = AgentRunner(
             memory_path=self.config.memory_path,
@@ -29,7 +29,7 @@ class ExperimentRunner:
         self.agent.persistent_memory.reset_poison()
 
     def reset_results(self) -> None:
-         open(self.config.output_path, "w", encoding="utf-8").close()
+         open(self.config.results_path, "w", encoding="utf-8").close()
 
     def refusal_checker(self, output: str) -> bool:
         lowered = output.lower()
@@ -57,7 +57,7 @@ class ExperimentRunner:
         task_scored_count = 0
         refusal_count = 0
 
-        with open(self.config.output_path, "a", encoding="utf-8") as f:
+        with open(self.config.results_path, "a", encoding="utf-8") as f:
             for i, eval_context in enumerate(eval_contexts):
                 eval_ctx = AgentContext(
                     label=eval_context.label,
@@ -108,7 +108,6 @@ class ExperimentRunner:
                 # Refusal rate
                 refused = bool(self.refusal_checker(output))
                 if refused: refusal_count += 1
-
 
                 attack_info = []
 
@@ -204,7 +203,7 @@ class ExperimentRunner:
                 "TA_baseline": baseline_stats["task_accuracy"],
                 "RR_baseline": baseline_stats["refusal_rate"],
                 "memory_path": self.config.memory_path,
-                "output_path": self.config.output_path,
+                "results_path": self.config.results_path,
             }
         
         num_trials = self.config.num_trials
@@ -250,7 +249,7 @@ class ExperimentRunner:
                     attacks=attacks
                 )
 
-                with open(self.config.output_path, "a", encoding="utf-8") as f:
+                with open(self.config.results_path, "a", encoding="utf-8") as f:
                     row = {
                         "trial_id": trial_id,
                         "eval_type": "memory_inject",
@@ -297,5 +296,5 @@ class ExperimentRunner:
             "TA_PR_mean": mean_ta_pr,
             "RR_PR_mean": mean_rr_pr,
             "memory_path": self.config.memory_path,
-            "output_path": self.config.output_path
+            "results_path": self.config.results_path
         }

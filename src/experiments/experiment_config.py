@@ -4,14 +4,14 @@ from typing import Optional, Dict, Any
 class ExperimentConfig:
     def __init__(self, retrieval_mode: str = "all", retrieval_k: Optional[int] = None, 
                  retrieval_key: Optional[str] = None, mode: str = "fake", num_trials: int = 1,
-                 memory_path: Optional[str] = None, output_path: Optional[str] = None):
+                 memory_path: Optional[str] = None, results_path: Optional[str] = None):
         self.retrieval_mode = retrieval_mode
         self.retrieval_k = retrieval_k
         self.retrieval_key = retrieval_key
         self.mode = mode
         self.num_trials = num_trials
         self.memory_path = memory_path
-        self.output_path = output_path
+        self.results_path = results_path
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -21,6 +21,6 @@ class ExperimentConfig:
             "mode": self.mode,
             "num_trials": self.num_trials,
             "memory_path": self.memory_path,
-            "output_path": self.output_path,
+            "results_path": self.results_path,
         }
     

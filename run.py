@@ -30,9 +30,9 @@ def run_experiment(args):
         else f"experiments/memory/{args.attack}/{args.experiment}.json"
     )
 
-    output_path = (
-        args.output_path
-        if args.output_path is not None
+    results_path = (
+        args.results_path
+        if args.results_path is not None
         else f"experiments/results/{args.attack}/{args.experiment}.jsonl"
     )
 
@@ -43,7 +43,7 @@ def run_experiment(args):
             mode=args.llm,
             num_trials=args.num_trials,
             memory_path=memory_path,
-            output_path=output_path,
+            results_path=results_path,
     )
 
     print("\n=== Running Experiment ===")
@@ -109,7 +109,7 @@ def main():
     )
 
     parser.add_argument(
-        "--output_path",
+        "--results_path",
         type=str,
         default=None,
         help="Path to results output file (default: derived from experiment name)"

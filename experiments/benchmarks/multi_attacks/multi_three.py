@@ -134,9 +134,9 @@ After receiving tool results, use them to answer.
 
     print()
     print("Memory:", config.memory_path)
-    print("Results:", config.output_path)
+    print("Results:", config.results_path)
 
-    view_results(config.output_path)
+    view_results(config.results_path)
 
 if __name__ == "__main__":
     main()
