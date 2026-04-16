@@ -44,6 +44,9 @@ def run_experiment(args):
             num_trials=args.num_trials,
             memory_path=memory_path,
             results_path=results_path,
+            judge_mode=args.judge_mode,
+            judge_model=args.judge_model,
+            judge_strategy=args.judge_strategy,
     )
 
     print("\n=== Running Experiment ===")
@@ -53,6 +56,9 @@ def run_experiment(args):
     print(f"retrieval_mode: {args.retrieval_mode}")
     print(f"retrieval_k: {args.retrieval_k}")
     print(f"retrieval_key: {args.retrieval_key}")
+    print(f"judge_mode: {args.judge_mode}")
+    print(f"judge_model: {args.judge_model}")
+    print(f"judge_strategy: {args.judge_strategy}")
 
     main_fn(config)
     
@@ -120,6 +126,29 @@ def main():
         type=int,
         default=1,
         help="Number of independent trials"
+    )
+
+    parser.add_argument(
+    "--judge_mode",
+    type=str,
+    default="off",
+    choices=["off", "fake", "real"],
+    help="Optional evaluation judge backend"
+)
+
+    parser.add_argument(
+        "--judge_model",
+        type=str,
+        default="meta-llama/Llama-3.2-1B-Instruct",
+        help="Model name used for judging"
+    )
+
+    parser.add_argument(
+        "--judge_strategy",
+        type=str,
+        default="rule",
+        choices=["rule", "judge", "hybrid"],
+        help="How attack success is scored"
     )
 
     args = parser.parse_args()

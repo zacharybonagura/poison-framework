@@ -13,6 +13,7 @@ class ToolInterfaceAttack(Attack):
             success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
+            judge_spec: Optional[Dict[str, Any]] = None,
 
             redirect_tool: Optional[str] = None,
             modify_input_fn: Optional[Callable[[str], str]] = None,
@@ -24,7 +25,8 @@ class ToolInterfaceAttack(Attack):
             target=AttackTarget.TOOL_INTERFACE,
             success_checker=success_checker,
             scope=scope,
-            trigger=trigger
+            trigger=trigger,
+            judge_spec=judge_spec
         )
         self.target_tool = target_tool
         self.redirect_tool = redirect_tool

@@ -4,7 +4,11 @@ from typing import Optional, Dict, Any
 class ExperimentConfig:
     def __init__(self, retrieval_mode: str = "all", retrieval_k: Optional[int] = None, 
                  retrieval_key: Optional[str] = None, mode: str = "fake", num_trials: int = 1,
-                 memory_path: Optional[str] = None, results_path: Optional[str] = None):
+                 memory_path: Optional[str] = None, results_path: Optional[str] = None,
+                 judge_mode: str = "off", # off, fake, real
+                 judge_model: str = "meta-llama/Llama-3.2-1B-Instruct",
+                 judge_strategy: str = "rule" # rule, judge, hybrid
+                ):
         self.retrieval_mode = retrieval_mode
         self.retrieval_k = retrieval_k
         self.retrieval_key = retrieval_key
@@ -12,6 +16,9 @@ class ExperimentConfig:
         self.num_trials = num_trials
         self.memory_path = memory_path
         self.results_path = results_path
+        self.judge_mode = judge_mode
+        self.judge_model = judge_model
+        self.judge_strategy = judge_strategy
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -22,5 +29,8 @@ class ExperimentConfig:
             "num_trials": self.num_trials,
             "memory_path": self.memory_path,
             "results_path": self.results_path,
+            "judge_mode": self.judge_mode,
+            "judge_model": self.judge_model,
+            "judge_strategy": self.judge_strategy,
         }
     

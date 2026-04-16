@@ -16,6 +16,7 @@ class ReasoningAttack(Attack):
             success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
             trigger: Optional[str] = None,
+            judge_spec: Optional[Dict[str, Any]] = None,
             position: str = "suffix",
             separator: str = "\n",
     ):
@@ -24,7 +25,8 @@ class ReasoningAttack(Attack):
             target=AttackTarget.REASONING,
             success_checker=success_checker,
             scope=scope,
-            trigger=trigger
+            trigger=trigger,
+            judge_spec=judge_spec,
         )
         self.malicious_instruction = malicious_instruction
         self.position = position

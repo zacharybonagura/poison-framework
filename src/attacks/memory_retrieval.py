@@ -10,6 +10,7 @@ class MemoryRetrievalAttack(Attack):
             success_checker: OutputChecker,
             scope: PoisoningScope = PoisoningScope.PERSISTENT,
             trigger: Optional[str] = None,
+            judge_spec: Optional[Dict[str, Any]] = None,
 
             malicious_memory: str = "",
             num_entries: int = 1,
@@ -24,7 +25,8 @@ class MemoryRetrievalAttack(Attack):
             target=AttackTarget.MEMORY_RETRIEVAL,
             success_checker=success_checker,
             scope=scope,
-            trigger=trigger
+            trigger=trigger,
+            judge_spec=judge_spec
         )
 
         self.malicious_memory = malicious_memory

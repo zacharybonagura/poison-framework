@@ -11,14 +11,16 @@ class ActionPolicyAttack(Attack):
         malicious_policy: str,
         success_checker: OutputChecker,
         scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
-        trigger: Optional[str] = None
+        trigger: Optional[str] = None,
+        judge_spec: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             name=name or "ActionPolicyAttack",
             target=AttackTarget.ACTION_POLICY,
             success_checker=success_checker,
             scope=scope,
-            trigger=trigger
+            trigger=trigger,
+            judge_spec=judge_spec
         )
         self.malicious_policy = malicious_policy
 

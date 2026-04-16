@@ -25,14 +25,15 @@ class Attack(ABC):
         target: AttackTarget,
         success_checker: OutputChecker,
         scope: PoisoningScope,
-        trigger: Optional[str] = None
+        trigger: Optional[str] = None,
+        judge_spec: Optional[Dict[str, Any]] = None,
     ):
         self.name = name
         self.target = target
         self.success_checker = success_checker
         self.scope = scope
         self.trigger = trigger
-        
+        self.judge_spec = judge_spec
 
     # Inject poisoning into the agent context before execution
     # This is the only method allowed to modify context
@@ -72,6 +73,10 @@ class Attack(ABC):
     # This function allows attackers to modify retrieval
     def modify_retrieval(self, mode, k, key):
         return mode, k, key
+    
+    # This returns True if the attack can use an LLM-as-a-judge to determine success
+    def has_judge(self) -> bool:
+        return self.judge_spec is not None
     
     # Returns information for current attack to log experiments
     def metadata(self) -> Dict[str, Any]:
