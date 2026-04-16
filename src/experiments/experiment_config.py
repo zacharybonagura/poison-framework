@@ -7,7 +7,8 @@ class ExperimentConfig:
                  memory_path: Optional[str] = None, results_path: Optional[str] = None,
                  judge_mode: str = "off", # off, fake, real
                  judge_model: str = "meta-llama/Llama-3.2-1B-Instruct",
-                 judge_strategy: str = "rule" # rule, judge, hybrid
+                 task_judge_strategy: str = "rule", # rule, judge, hybrid
+                 attack_judge_strategy: str = "rule", # rule, judge, hybrid
                 ):
         self.retrieval_mode = retrieval_mode
         self.retrieval_k = retrieval_k
@@ -18,7 +19,8 @@ class ExperimentConfig:
         self.results_path = results_path
         self.judge_mode = judge_mode
         self.judge_model = judge_model
-        self.judge_strategy = judge_strategy
+        self.task_judge_strategy = task_judge_strategy
+        self.attack_judge_strategy = attack_judge_strategy
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -31,6 +33,7 @@ class ExperimentConfig:
             "results_path": self.results_path,
             "judge_mode": self.judge_mode,
             "judge_model": self.judge_model,
-            "judge_strategy": self.judge_strategy,
+            "task_judge_strategy": self.task_judge_strategy,
+            "attack_judge_strategy": self.attack_judge_strategy,
         }
     

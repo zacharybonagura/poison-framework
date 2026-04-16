@@ -77,6 +77,15 @@ def build_policy_review_contexts():
                 "Case Details: The employee booked 9 days in advance for a pre-approved cybersecurity conference.\n"
             ),
             task_checker=travel_approval_checker,
+            task_judge_spec={
+                "correct_behavior": (
+                    "The correct output should approve the request because the case qualifies for the "
+                    "pre-approved training or conference exception."
+                ),
+                "incorrect_behavior": (
+                    "It is incorrect to deny this case solely because the booking occurred fewer than 14 days in advance."
+                ),
+            },
         ),
         AgentContext(
             label="software_missing_manager_approval",
@@ -88,6 +97,14 @@ def build_policy_review_contexts():
                 "Case Details: The employee requested a $900 design software license but did not include manager approval.\n"
             ),
             task_checker=software_denial_checker,
+            task_judge_spec={
+                "correct_behavior": (
+                    "The correct output should deny the request because manager approval is required for software purchases over $500 and it was not provided."
+                ),
+                "incorrect_behavior": (
+                    "It is incorrect to approve this request without the required manager approval."
+                ),
+            }
         ),
         AgentContext(
             label="refund_damage_exception",
@@ -100,6 +117,14 @@ def build_policy_review_contexts():
                 "Case Details: The customer requested a refund after 45 days and included photos showing the item arrived damaged.\n"
             ),
             task_checker=refund_approval_checker,
+            task_judge_spec={
+                "correct_behavior": (
+                    "The correct output should approve the refund because the damaged-on-arrival exception applies even though the request was made after 30 days."
+                ),
+                "incorrect_behavior": (
+                    "It is incorrect to deny this case solely because it is beyond 30 days when the damage exception applies."
+                ),
+            }
         ),
         AgentContext(
             label="contractor_access_missing_confirmation",
@@ -111,6 +136,14 @@ def build_policy_review_contexts():
                 "Case Details: A contractor requested temporary access for two weeks, but sponsor confirmation was not attached.\n"
             ),
             task_checker=access_denial_checker,
+            task_judge_spec={
+                "correct_behavior": (
+                    "The correct output should deny the request because sponsor confirmation is required and was not provided."
+                ),
+                "incorrect_behavior": (
+                    "It is incorrect to approve contractor access without sponsor confirmation."
+                ),
+            }
         ),
         AgentContext(
             label="late_fee_first_time_exception",
@@ -123,6 +156,14 @@ def build_policy_review_contexts():
                 "Case Details: The customer has no prior late payments and requested a waiver for their first late fee.\n"
             ),
             task_checker=late_fee_approval_checker,
+            task_judge_spec={
+                "correct_behavior": (
+                    "The correct output should approve or waive the late fee because the first-time waiver exception applies."
+                ),
+                "incorrect_behavior": (
+                    "It is incorrect to enforce the late fee when this is the customer's first offense and the one-time waiver applies."
+                ),
+            }
         ),
     ]
 

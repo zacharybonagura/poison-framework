@@ -46,7 +46,8 @@ def run_experiment(args):
             results_path=results_path,
             judge_mode=args.judge_mode,
             judge_model=args.judge_model,
-            judge_strategy=args.judge_strategy,
+            task_judge_strategy=args.task_judge_strategy,
+            attack_judge_strategy=args.attack_judge_strategy,
     )
 
     print("\n=== Running Experiment ===")
@@ -58,7 +59,8 @@ def run_experiment(args):
     print(f"retrieval_key: {args.retrieval_key}")
     print(f"judge_mode: {args.judge_mode}")
     print(f"judge_model: {args.judge_model}")
-    print(f"judge_strategy: {args.judge_strategy}")
+    print(f"task_judge_strategy: {args.task_judge_strategy}")
+    print(f"attack_judge_strategy: {args.attack_judge_strategy}")
 
     main_fn(config)
     
@@ -144,7 +146,15 @@ def main():
     )
 
     parser.add_argument(
-        "--judge_strategy",
+        "--task_judge_strategy",
+        type=str,
+        default="rule",
+        choices=["rule", "judge", "hybrid"],
+        help="How task correctness is scored"
+    )
+        
+    parser.add_argument(
+        "--attack_judge_strategy",
         type=str,
         default="rule",
         choices=["rule", "judge", "hybrid"],

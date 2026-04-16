@@ -15,7 +15,8 @@ def run_variant(base_config, surface, scenario, variant_name, build_attack, eval
         results_path=f"experiments/results/{surface}/{scenario}_{variant_name}.jsonl",
         judge_mode=base_config.judge_mode,
         judge_model=base_config.judge_model,
-        judge_strategy=base_config.judge_strategy,
+        task_judge_strategy=base_config.task_judge_strategy,
+        attack_judge_strategy=base_config.attack_judge_strategy,
     )
 
     runner = ExperimentRunner(config)
