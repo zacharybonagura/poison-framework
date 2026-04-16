@@ -45,7 +45,7 @@ class PromptInjectionAttack(Attack):
                 return original_prompt + sep + instruction
             
             idx = original_prompt.find(self.trigger)
-            if idx == 1:
+            if idx == -1:
                 return original_prompt + sep + instruction
             
             if self.position == "before_trigger":
