@@ -38,7 +38,7 @@ class ActionPolicyAttack(Attack):
             return None
         
         return {
-            "source": "planning",
-            "key": self.trigger or "planning_policy",
+            "source": "action_policy",
+            "key": self.trigger or "action_policy",
             "value": "Action Planning Policy:\n" + self.malicious_policy
         }

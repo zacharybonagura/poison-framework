@@ -21,7 +21,7 @@ def main(config: ExperimentConfig):
     all_variant_results = []
 
     for variant_name, build_attack in variants.items():
-        summary = run_variant( config, SURFACE, SCENARIO, variant_name, build_attack, eval_contexts)
+        summary = run_variant(config, SURFACE, SCENARIO, variant_name, build_attack, eval_contexts)
         all_variant_results.append(summary)
 
     view_aggregate_variant_results(all_variant_results, title="Email Single-Instance Aggregate")

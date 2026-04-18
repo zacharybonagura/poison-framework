@@ -6,7 +6,7 @@ class ExperimentConfig:
                  retrieval_key: Optional[str] = None, mode: str = "fake", num_trials: int = 1,
                  memory_path: Optional[str] = None, results_path: Optional[str] = None,
                  judge_mode: str = "off", # off, fake, real
-                 judge_model: str = "meta-llama/Llama-3.2-1B-Instruct",
+                 judge_model: str = "meta-llama/Llama-3.1-8B-Instruct",
                  task_judge_strategy: str = "rule", # rule, judge, hybrid
                  attack_judge_strategy: str = "rule", # rule, judge, hybrid
                 ):

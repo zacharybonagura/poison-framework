@@ -141,7 +141,7 @@ def main():
     parser.add_argument(
         "--judge_model",
         type=str,
-        default="meta-llama/Llama-3.2-1B-Instruct",
+        default="meta-llama/Llama-3.1-8B-Instruct",
         help="Model name used for judging"
     )
 

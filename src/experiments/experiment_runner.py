@@ -99,7 +99,17 @@ class ExperimentRunner:
             "judge_task_raw": judge_task_result["raw"],
         }
     
-    def _score_attack_success(self, attack, eval_context, output: str) -> Dict[str, Any]:
+    def _score_attack_success(self, attack, eval_context, output: str, triggered: bool = True) -> Dict[str, Any]:
+        if not triggered:
+            return {
+                "success": False,
+                "method": None,
+                "rule_attack_success": None,
+                "judge_attack_success": None,
+                "judge_attack_reason": None,
+                "judge_attack_raw": None,
+            }
+
         rule_attack_success = attack.detect_success(output)
 
         if (
@@ -193,7 +203,13 @@ class ExperimentRunner:
                         scored_attacks = [a for a in scored_attacks if a.scope == PoisoningScope.PERSISTENT]
 
                     for attack in scored_attacks:
-                        attack_success[attack.name] = self._score_attack_success(attack, eval_ctx, output)
+                        if eval_type == "asr":
+                            is_triggered = attack.name in triggered_names
+                        else:
+                            # For PR, persistent attacks are evaluated in the fresh session
+                            is_triggered = True
+
+                        attack_success[attack.name] = self._score_attack_success(attack, eval_ctx, output, triggered=is_triggered)
 
                 if eval_type == "asr" and attacks:
                     displayed_attacks_for_asr = attacks or []
