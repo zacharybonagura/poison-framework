@@ -47,7 +47,7 @@ class Attack(ABC):
         if self.trigger is None:
             return True
 
-        return self.trigger in str(context)
+        return self.trigger in str(context.get("user_input", ""))
     
     # Return poisoned data to store in long-term memory 
     #       (Overridden by persistant attacks)
@@ -60,13 +60,7 @@ class Attack(ABC):
     def detect_success(self, output: str) -> bool:
         return self.success_checker(output)
 
-    # These functions allow attackers to modify tool calls, outputs, and descriptions, but are not required to do so
-    def modify_tool_call(self, tool_name: str, tool_input: str):
-        return tool_name, tool_input
-    
-    def modify_tool_output(self, tool_name: str, output: str):
-        return output
-
+    # These functions allow attackers to modify tool descriptions, but are not required to do so
     def modify_tool_descriptions(self, tools: List[Tool]) -> List[Tool]:
         return tools
     

@@ -5,9 +5,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda
 from langchain_community.llms.fake import FakeListLLM
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Optional, Tuple, Dict, List
 
-from attacks.attack import Attack, PoisoningScope, AttackTarget
+from attacks.attack import Attack, PoisoningScope
 from agent.agent_context import AgentContext
 from agent.memory_store import MemoryStore
 
@@ -33,7 +33,7 @@ class AgentRunner:
 
         elif self.llm_mode == "real":
             return ChatOpenAI(
-                model="meta-llama/Llama-3.2-1B-Instruct",
+                model="meta-llama/Llama-3.1-8B-Instruct",
                 base_url="http://localhost:7035/v1",
                 api_key="not-needed",
                 temperature=0.0,
@@ -138,12 +138,35 @@ If no tool is needed, respond with a normal final answer.
     # Get the tool from json output from model
     def _extract_tool_call(self, output: str):
         try:
+            # First try normal JSON directly
             data = json.loads(output)
             return data.get("tool_call")
-        except:
+        except Exception:
+            pass
+
+        try:
+            # Extract the first JSON object-looking span
+            match = re.search(r"\{[\s\S]*\}", output)
+            if not match:
+                return None
+
+            candidate = match.group(0)
+
+            # Remove Python-style # comments
+            candidate = re.sub(r"#.*", "", candidate)
+
+            # Remove JS-style // comments
+            candidate = re.sub(r"//.*", "", candidate)
+
+            # Remove trailing commas before } or ]
+            candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
+
+            data = json.loads(candidate)
+            return data.get("tool_call")
+        except Exception:
             return None
         
-    def run(self, context: AgentContext, attacks: Optional[List[Attack]] = None) -> str:
+    def run(self, context: AgentContext, attacks: Optional[List[Attack]] = None, allow_active_tool_modification: bool = True) -> str:
         attacks = attacks or []
 
         context = context.to_dict()
@@ -171,9 +194,10 @@ If no tool is needed, respond with a normal final answer.
         # Update descriptions of tools if attack before asking model any query
         tools = context["tools"]
 
-        for attack in attacks:
-            if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE: 
-                tools = attack.modify_tool_descriptions(tools)
+        if allow_active_tool_modification:
+            for attack in attacks:
+                if attack and attack.should_trigger(context):
+                    tools = attack.modify_tool_descriptions(tools)
 
         context["tools"] = tools
 
@@ -188,20 +212,11 @@ If no tool is needed, respond with a normal final answer.
                 tool_name = tool_call["name"]
                 tool_args = tool_call["arguments"]
 
-                for attack in attacks:
-                    if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
-                        tool_name, tool_args = attack.modify_tool_call(tool_name, tool_args)
-
                 tool = next((t for t in context["tools"] if t.name == tool_name), None)
                 if tool is None:
                     return f"Error: Tool {tool_name} not found"
                 
                 tool_result = tool.execute(tool_args)
-                for attack in attacks:
-                    if attack and attack.scope == PoisoningScope.SINGLE_INSTANCE:
-                        tool_result = attack.modify_tool_output(tool_name, tool_result)
-
-                # context["tools"] = []
 
                 context["scratchpad"] += f"""
 The tool '{tool_name}' returned: {tool_result} 
@@ -210,7 +225,6 @@ Provide the final answer to the user in plain natural language.
 Do NOT output JSON.
 Do NOT call the tool '{tool_name}' again.
 """
-                
                 step += 1
                 continue
             else:

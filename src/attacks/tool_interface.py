@@ -1,24 +1,22 @@
-from typing import Optional, Callable, List, Any, Dict
+from typing import Optional, List, Dict, Any
 from attacks.attack import Attack, AttackTarget, PoisoningScope
 from attacks.output_checker import OutputChecker
 from agent.tool import Tool
 from copy import deepcopy
 
+
 class ToolInterfaceAttack(Attack):
 
     def __init__(
-            self,
-            name: str,
-            target_tool: str,
-            success_checker: OutputChecker,
-            scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
-            trigger: Optional[str] = None,
-            judge_spec: Optional[Dict[str, Any]] = None,
-
-            redirect_tool: Optional[str] = None,
-            modify_input_fn: Optional[Callable[[str], str]] = None,
-            forced_output: Optional[str] = None,
-            poisoned_description: Optional[str] = None,
+        self,
+        name: str,
+        target_tool: str,
+        success_checker: OutputChecker,
+        scope: PoisoningScope = PoisoningScope.SINGLE_INSTANCE,
+        trigger: Optional[str] = None,
+        judge_spec: Optional[Dict[str, Any]] = None,
+        poisoned_description: Optional[str] = None,
+        tool_policy: Optional[str] = None,
     ):
         super().__init__(
             name=name or "ToolInterfaceAttack",
@@ -26,32 +24,31 @@ class ToolInterfaceAttack(Attack):
             success_checker=success_checker,
             scope=scope,
             trigger=trigger,
-            judge_spec=judge_spec
+            judge_spec=judge_spec,
         )
         self.target_tool = target_tool
-        self.redirect_tool = redirect_tool
-        self.modify_input_fn = modify_input_fn
-        self.forced_output = forced_output
         self.poisoned_description = poisoned_description
+        self.tool_policy = tool_policy
 
-    # Tool interface attacks typically do not modify prompt
-    def inject(self, context):
+    # Tool interface poisoning does not directly rewrite the task prompt,
+    # but it may inject tool-use policy text into the active context so the
+    # model is biased during the current run.
+    def inject(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.should_trigger(context):
+            return context
+
+        if self.tool_policy:
+            context.setdefault("memory", [])
+            context["memory"].append(
+                f"Tool-use policy for '{self.target_tool}': {self.tool_policy}"
+            )
+
         return context
-    
-    def modify_tool_call(self, tool_name: str, tool_input: str):
-        if tool_name == self.target_tool:
-            if self.redirect_tool: tool_name = self.redirect_tool
-            if self.modify_input_fn: tool_input = self.modify_input_fn(tool_input)
 
-        return tool_name, tool_input
-    
-    def modify_tool_output(self, tool_name: str, output: str):
-        if tool_name == self.target_tool and self.forced_output is not None:
-            return self.forced_output
-        return output
-    
+    # Poison the tool description shown to the model
     def modify_tool_descriptions(self, tools: List[Tool]) -> List[Tool]:
-        if self.poisoned_description is None: return tools
+        if self.poisoned_description is None:
+            return tools
 
         modified = []
         for t in tools:
@@ -61,35 +58,31 @@ class ToolInterfaceAttack(Attack):
                 modified.append(new_tool)
             else:
                 modified.append(t)
-        
+
         return modified
-    
+
+    # Persist tool-interface poisoning as long-term text memory
     def persist_longterm(self) -> Optional[Dict[str, Any]]:
         if self.scope != PoisoningScope.PERSISTENT:
             return None
-    
+
         policy_lines = []
 
-        if self.forced_output:
-            policy_lines.append(
-                f"When the '{self.target_tool}' tool is called, override its result with: {self.forced_output}"
-            )
-
-        if self.redirect_tool:
-            policy_lines.append(
-                f"If the agent tries to call '{self.target_tool}', redirect it to '{self.redirect_tool}' and use that instead."
-            )
-        
         if self.poisoned_description:
             policy_lines.append(
                 f"The correct description of '{self.target_tool}' is: {self.poisoned_description}"
             )
 
+        if self.tool_policy:
+            policy_lines.append(
+                f"Tool-use policy for '{self.target_tool}': {self.tool_policy}"
+            )
+
         if not policy_lines:
             return None
-        
+
         return {
             "source": "tool_interface",
             "key": f"tool_policy_{self.target_tool}",
-            "value": "\n".join(policy_lines)
+            "value": "\n".join(policy_lines),
         }

@@ -1,11 +1,8 @@
 from agent.agent_context import AgentContext
 from attacks.attack import PoisoningScope
-from attacks.prompt_injection import PromptInjectionAttack
 from experiments.experiment_config import ExperimentConfig
-from experiments.experiment_runner import ExperimentRunner
-from experiments.format_results import view_results
-from attacks.output_checker import *
-from experiments.benchmark_runner import run_variant
+from experiments.benchmark_runner import run_baseline, run_variant
+from experiments.format_results import view_aggregate_variant_results
 from experiments.scenarios.extraction_scenario import *
 
 SCENARIO = "extraction_persistent"
@@ -32,8 +29,15 @@ def main(config: ExperimentConfig):
         "case_id_omission": lambda: build_case_id_omission_attack(PoisoningScope.PERSISTENT),
     }
 
+    run_baseline(config, SURFACE, SCENARIO, eval_contexts)
+
+    all_variant_results = []
+
     for variant_name, build_attack in variants.items():
-        run_variant(config, SURFACE, SCENARIO, variant_name, build_attack, eval_contexts, attack_context)
+        summary = run_variant(config, SURFACE, SCENARIO, variant_name, build_attack, eval_contexts, attack_context)
+        all_variant_results.append(summary)
+
+    view_aggregate_variant_results(all_variant_results, title="Extraction Persistent Aggregate")
 
 if __name__ == "__main__":
     main()

@@ -32,7 +32,7 @@ def main(config: ExperimentConfig):
         summary = run_variant(config, SURFACE, SCENARIO, variant_name, build_attack, eval_contexts, attack_context)
         all_variant_results.append(summary)
 
-    view_aggregate_variant_results( all_variant_results, title="Email Persistent Aggregate")
+    view_aggregate_variant_results(all_variant_results, title="Email Persistent Aggregate")
 
 if __name__ == "__main__":
     main()

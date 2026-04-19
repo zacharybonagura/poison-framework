@@ -191,7 +191,7 @@ class ExperimentRunner:
 
                 triggered_names = {a["name"] for a in triggered_attacks}
 
-                output = agent.run(eval_ctx, attacks=attacks)
+                output = agent.run(eval_ctx, attacks=attacks,allow_active_tool_modification=apply_active_injection)
 
                 # Attack success
                 attack_success = {}
