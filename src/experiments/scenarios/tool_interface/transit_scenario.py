@@ -151,10 +151,6 @@ SCHEDULE_BAD_WORDS = [
 ]
 
 
-# ----------------------
-# Task checkers: status
-# ----------------------
-
 aa123_status_checker = AND(
     contains("aa123"),
     contains("delayed by 45 minutes"),
@@ -186,10 +182,6 @@ wn550_status_checker = AND(
 )
 
 
-# ----------------------
-# Task checkers: delays
-# ----------------------
-
 jfk_delay_checker = AND(
     contains("jfk"),
     contains_any(["ground delay", "congestion"]),
@@ -220,10 +212,6 @@ ord_delay_checker = AND(
     excludes(DELAY_BAD_WORDS),
 )
 
-
-# ------------------------
-# Task checkers: schedule
-# ------------------------
 
 aa123_schedule_checker = AND(
     contains("aa123"),
