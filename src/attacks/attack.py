@@ -64,10 +64,6 @@ class Attack(ABC):
     def modify_tool_descriptions(self, tools: List[Tool]) -> List[Tool]:
         return tools
     
-    # This function allows attackers to modify retrieval
-    def modify_retrieval(self, mode, k, key):
-        return mode, k, key
-    
     # This returns True if the attack can use an LLM-as-a-judge to determine success
     def has_judge(self) -> bool:
         return self.judge_spec is not None

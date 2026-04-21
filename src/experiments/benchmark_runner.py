@@ -2,7 +2,7 @@ from experiments.experiment_config import ExperimentConfig
 from experiments.experiment_runner import ExperimentRunner
 from experiments.format_results import view_results
 
-def run_baseline(base_config, surface, scenario, eval_contexts):
+def run_baseline(base_config, surface, scenario, eval_contexts, seed_memory=None):
     print(f"\n\n===== Running baseline =====")
 
     config = ExperimentConfig(
@@ -23,6 +23,9 @@ def run_baseline(base_config, surface, scenario, eval_contexts):
     runner.reset_memory()
     runner.reset_results()
 
+    if seed_memory is not None:
+        seed_memory(config.memory_path)
+
     results = runner.run(None, eval_contexts, lambda: [])
     print(results)
     summary = view_results(config.results_path)
@@ -37,7 +40,8 @@ def run_baseline(base_config, surface, scenario, eval_contexts):
     }
 
 
-def run_variant(base_config, surface, scenario, variant_name, build_attack, eval_contexts, attack_context=None):
+def run_variant(base_config, surface, scenario, variant_name, build_attack, eval_contexts,
+                attack_context=None, seed_memory=None):
     print(f"\n\n===== Running variant: {variant_name} =====")
 
     config = ExperimentConfig(
@@ -57,6 +61,9 @@ def run_variant(base_config, surface, scenario, variant_name, build_attack, eval
     runner = ExperimentRunner(config)
     runner.reset_memory()
     runner.reset_results()
+
+    if seed_memory is not None:
+        seed_memory(config.memory_path)
 
     results = runner.run(attack_context, eval_contexts, build_attack)
 

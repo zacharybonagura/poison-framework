@@ -3,7 +3,7 @@ from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
 from experiments.format_results import view_aggregate_variant_results
-from experiments.scenarios.customer_service_scenario import *
+from experiments.scenarios.prompt_injection.customer_service_scenario import *
 
 SCENARIO = "customer_service_persistent"
 SURFACE = "prompt_injection"

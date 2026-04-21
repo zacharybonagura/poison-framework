@@ -3,7 +3,7 @@ from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
 from experiments.format_results import view_aggregate_variant_results
-from experiments.scenarios.moderation_scenario import *
+from experiments.scenarios.action_policy.moderation_scenario import *
 
 SCENARIO = "moderation_persistent"
 SURFACE = "action_policy"

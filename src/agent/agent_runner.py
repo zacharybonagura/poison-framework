@@ -172,19 +172,11 @@ If no tool is needed, respond with a normal final answer.
         context = context.to_dict()
         context.setdefault("scratchpad", "")
 
-        # Load persistent memory (values) based on retrieval mode and append to current memory
-        mode = self.retrieval_mode
-        k = self.retrieval_k
-        key = self.retrieval_key
-
-        for attack in attacks:
-            if attack:
-                mode, k, key = attack.modify_retrieval(mode, k, key)
-
+        # Load persistent memory (values) based on retrieval parameters
         persistent_values = self.persistent_memory.retrieve(
-            mode=mode,
-            k=k,
-            key=key
+            mode=self.retrieval_mode,
+            k=self.retrieval_k,
+            key=self.retrieval_key
         )
 
         # Add persistent memory information into model's memory

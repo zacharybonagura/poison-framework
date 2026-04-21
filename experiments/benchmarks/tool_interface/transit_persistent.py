@@ -3,7 +3,7 @@ from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
 from experiments.format_results import view_aggregate_variant_results
-from experiments.scenarios.transit_scenario import *
+from experiments.scenarios.tool_interface.transit_scenario import *
 
 SCENARIO = "transit_persistent"
 SURFACE = "tool_interface"

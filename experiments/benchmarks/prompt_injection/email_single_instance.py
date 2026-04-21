@@ -2,7 +2,7 @@ from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
 from experiments.format_results import view_aggregate_variant_results
-from experiments.scenarios.email_scenario import *
+from experiments.scenarios.prompt_injection.email_scenario import *
 
 SCENARIO = "email_single_instance"
 SURFACE = "prompt_injection"

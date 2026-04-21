@@ -2,7 +2,7 @@ from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
 from experiments.format_results import view_aggregate_variant_results
-from experiments.scenarios.finance_scenario import *
+from experiments.scenarios.tool_interface.finance_scenario import *
 
 SCENARIO = "finance_single_instance"
 SURFACE = "tool_interface"

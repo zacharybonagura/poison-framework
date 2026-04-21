@@ -2,7 +2,7 @@ from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
 from experiments.format_results import view_aggregate_variant_results
-from experiments.scenarios.scholarship_scenario import *
+from experiments.scenarios.action_policy.scholarship_scenario import *
 
 SCENARIO = "scholarship_single_instance"
 SURFACE = "action_policy"
