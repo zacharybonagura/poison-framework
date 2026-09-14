@@ -22,7 +22,7 @@ class MemoryRetrievalAttack(Attack):
             trigger=trigger,
             judge_spec=judge_spec,
         )
-        self.malicious_entries = malicious_entries
+        self.malicious_entries = malicious_entries or []
 
     def inject(self, context: Dict[str, Any]) -> Dict[str, Any]:
         if not self.should_trigger(context):

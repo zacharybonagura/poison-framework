@@ -154,6 +154,70 @@ class ExperimentRunner:
             "judge_attack_raw": judge_attack_result["raw"],
         }
 
+    def reorder_results_file(self) -> None:
+        if not os.path.exists(self.config.results_path):
+            return
+
+        rows = []
+        with open(self.config.results_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    rows.append(json.loads(line))
+
+        if not rows:
+            return
+
+        baseline_rows = [r for r in rows if r.get("eval_type") == "baseline"]
+        other_rows = [r for r in rows if r.get("eval_type") != "baseline"]
+
+        # Preserve label order based on first appearance across the whole file
+        label_order = {}
+        for r in rows:
+            label = r.get("label")
+            if label is not None and label not in label_order:
+                label_order[label] = len(label_order)
+
+        eval_type_order = {
+            "baseline": 0,
+            "asr": 1,
+            "memory_inject": 2,
+            "pr": 3,
+        }
+
+        def baseline_sort_key(r):
+            return (
+                label_order.get(r.get("label"), float("inf")),
+                r.get("trial_id", -1),
+                r.get("eval_index", -1),
+            )
+
+        def other_sort_key(r):
+            eval_type = r.get("eval_type")
+            trial_id = r.get("trial_id", -1)
+            eval_index = r.get("eval_index", -1)
+
+            if eval_type == "memory_inject":
+                return (
+                    eval_type_order.get(eval_type, 99),
+                    label_order.get(r.get("label"), float("inf")),
+                    trial_id,
+                    0,
+                )
+
+            return (
+                eval_type_order.get(eval_type, 99),
+                label_order.get(r.get("label"), float("inf")),
+                trial_id,
+                eval_index,
+            )
+
+        baseline_rows.sort(key=baseline_sort_key)
+        other_rows.sort(key=other_sort_key)
+
+        with open(self.config.results_path, "w", encoding="utf-8") as f:
+            for r in baseline_rows + other_rows:
+                f.write(json.dumps(r) + "\n")
+                    
     # Evaluate a list of contexts under a given attack setting
     # Each evaluation row is logged to the results JSONL file.
     def _evaluate(self, trial_id: Optional[int], agent: AgentRunner, eval_contexts: list[AgentContext], 
@@ -321,35 +385,52 @@ class ExperimentRunner:
     #          - then inject into memory
     #          - evlauate PR using fresh agent
     def run(self, attack_context: Optional[AgentContext],
-            eval_contexts: list[AgentContext], 
-            build_attacks: Callable[[], Optional[List[Attack]]]) -> Dict[str, Any]:
+        eval_contexts: list[AgentContext], 
+        build_attacks: Callable[[], Optional[List[Attack]]]) -> Dict[str, Any]:
 
         attacks = build_attacks()
 
+        num_trials = self.config.num_trials
+
         # Baseline attack
         if attacks is None or len(attacks) == 0:
-            self.reset_memory()
             self.reset_results()
 
-            baseline_stats = self._evaluate(
-                trial_id=None,
-                agent=self.agent,
-                eval_contexts=eval_contexts,
-                attacks=None,
-                eval_type="baseline",
-                apply_active_injection=False
-            )
+            all_ta_baseline = []
+            all_rr_baseline = []
+            last_baseline_stats = None
 
+            for trial_id in range(num_trials):
+                self.reset_memory()
+
+                baseline_stats = self._evaluate(
+                    trial_id=trial_id,
+                    agent=self.agent,
+                    eval_contexts=eval_contexts,
+                    attacks=None,
+                    eval_type="baseline",
+                    apply_active_injection=False
+                )
+
+                last_baseline_stats = baseline_stats
+                all_ta_baseline.append(baseline_stats["task_accuracy"])
+                all_rr_baseline.append(baseline_stats["refusal_rate"])
+
+            mean_ta_baseline = (sum(all_ta_baseline) / len(all_ta_baseline) if all_ta_baseline else 0.0)
+            mean_rr_baseline = (sum(all_rr_baseline) / len(all_rr_baseline) if all_rr_baseline else 0.0)
+
+            self.reorder_results_file()
             return {
+                "eval_count": last_baseline_stats["eval_count"] if last_baseline_stats else 0,
+                "success_count": 0,
                 "ASR_mean": 0.0,
                 "PR_mean": None,
-                "TA_baseline": baseline_stats["task_accuracy"],
-                "RR_baseline": baseline_stats["refusal_rate"],
+                "TA_baseline_mean": mean_ta_baseline,
+                "RR_baseline_mean": mean_rr_baseline,
                 "memory_path": self.config.memory_path,
                 "results_path": self.config.results_path,
             }
         
-        num_trials = self.config.num_trials
         all_asr = []
         all_pr = []
         all_ta_asr = []
@@ -429,6 +510,7 @@ class ExperimentRunner:
         mean_ta_pr = sum(all_ta_pr) / len(all_ta_pr) if all_ta_pr else None
         mean_rr_pr = sum(all_rr_pr) / len(all_rr_pr) if all_rr_pr else None
 
+        self.reorder_results_file()
         return {
             "eval_count": asr_stats["eval_count"],
             "success_count": asr_stats["success_count"],

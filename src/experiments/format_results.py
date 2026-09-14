@@ -250,10 +250,21 @@ def view_results(path):
             f"{truncate(output,60)}"
         )
 
+    baseline_label_order = {}
     for r in baseline_rows:
+        label = r["label"]
+        if label not in baseline_label_order:
+            baseline_label_order[label] = len(baseline_label_order)
+
+    baseline_rows.sort(key=lambda r: (baseline_label_order[r["label"]], r.get("trial_id", -1)))
+
+    for r in baseline_rows:
+        trial = r.get("trial_id")
+        trial = trial + 1 if trial is not None else "-"
+
         print_row(
             label=r["label"],
-            trial="-",
+            trial=trial,
             type_name="baseline",
             attacks=[],
             success="-",
@@ -265,7 +276,15 @@ def view_results(path):
     if baseline_rows and asr_rows:
         print()
 
-    asr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
+    # Preserve label order based on first appearance, then sort trials within each label
+    asr_label_order = {}
+    for r in asr_rows:
+        label = r["label"]
+        if label not in asr_label_order:
+            asr_label_order[label] = len(asr_label_order)
+
+    asr_rows.sort(key=lambda r: (asr_label_order[r["label"]], r.get("trial_id", -1)))
+
     for r in asr_rows:
         trial = r.get("trial_id")
         trial = trial + 1 if trial is not None else "-"
@@ -283,7 +302,14 @@ def view_results(path):
     if pr_rows:
         print()
 
-    pr_rows.sort(key=lambda r: (r["label"], r.get("trial_id", -1)))
+    pr_label_order = {}
+    for r in pr_rows:
+        label = r["label"]
+        if label not in pr_label_order:
+            pr_label_order[label] = len(pr_label_order)
+
+    pr_rows.sort(key=lambda r: (pr_label_order[r["label"]], r.get("trial_id", -1)))
+    
     for r in pr_rows:
         trial = r.get("trial_id")
         trial = trial + 1 if trial is not None else "-"

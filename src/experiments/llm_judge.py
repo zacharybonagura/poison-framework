@@ -36,20 +36,17 @@ class LLMJudge:
     def _extract_json(self, text: str) -> Dict[str, Any]:
         text = text.strip()
 
-        # First try direct parse
         try:
             return json.loads(text)
         except Exception:
             pass
 
-        # Try to extract the first JSON object-looking span
         start = text.find("{")
         if start == -1:
             raise ValueError(f"Judge did not return JSON: {text}")
 
         candidate = text[start:].strip()
 
-        # If the model forgot the final closing brace, add one
         if candidate.count("{") > candidate.count("}"):
             candidate = candidate + "}"
 
@@ -58,7 +55,6 @@ class LLMJudge:
         except Exception:
             pass
 
-        # Fallback: regex extract the outermost-looking object
         match = re.search(r"\{[\s\S]*\}", text)
         if match:
             candidate = match.group(0).strip()
@@ -70,6 +66,21 @@ class LLMJudge:
                 pass
 
         raise ValueError(f"Judge did not return valid JSON: {text}")
+
+    def _safe_parse_or_fail(self, raw: str) -> Dict[str, Any]:
+        try:
+            parsed = self._extract_json(raw)
+            return {
+                "passed": bool(parsed.get("passed", False)),
+                "reason": str(parsed.get("reason", "")),
+                "raw": raw,
+            }
+        except Exception as e:
+            return {
+                "passed": False,
+                "reason": "judge_parse_failed",
+                "raw": raw,
+            }
 
     def judge_task(
         self,
@@ -119,14 +130,8 @@ Rules:
 
         result = self.llm.invoke(prompt)
         raw = getattr(result, "content", result)
-        parsed = self._extract_json(raw)
+        return self._safe_parse_or_fail(raw)
 
-        return {
-            "passed": bool(parsed.get("passed", False)),
-            "reason": str(parsed.get("reason", "")),
-            "raw": raw,
-        }
-        
     def judge_attack(
         self,
         attack_name: str,
@@ -183,12 +188,4 @@ Rules:
 
         result = self.llm.invoke(prompt)
         raw = getattr(result, "content", result)
-        parsed = self._extract_json(raw)
-        print(parsed)
-
-        return {
-            "passed": bool(parsed.get("passed", False)),
-            "reason": str(parsed.get("reason", "")),
-            "raw": raw,
-        }
-        
+        return self._safe_parse_or_fail(raw)

@@ -1,4 +1,3 @@
-from agent.agent_context import AgentContext
 from attacks.attack import PoisoningScope
 from experiments.experiment_config import ExperimentConfig
 from experiments.benchmark_runner import run_baseline, run_variant
