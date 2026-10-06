@@ -30,9 +30,9 @@ def run_experiment(args):
         else f"experiments/memory/{args.attack}/{args.experiment}.json"
     )
 
-    output_path = (
-        args.output_path
-        if args.output_path is not None
+    results_path = (
+        args.results_path
+        if args.results_path is not None
         else f"experiments/results/{args.attack}/{args.experiment}.jsonl"
     )
 
@@ -43,7 +43,11 @@ def run_experiment(args):
             mode=args.llm,
             num_trials=args.num_trials,
             memory_path=memory_path,
-            output_path=output_path,
+            results_path=results_path,
+            judge_mode=args.judge_mode,
+            judge_model=args.judge_model,
+            task_judge_strategy=args.task_judge_strategy,
+            attack_judge_strategy=args.attack_judge_strategy,
     )
 
     print("\n=== Running Experiment ===")
@@ -53,6 +57,10 @@ def run_experiment(args):
     print(f"retrieval_mode: {args.retrieval_mode}")
     print(f"retrieval_k: {args.retrieval_k}")
     print(f"retrieval_key: {args.retrieval_key}")
+    print(f"judge_mode: {args.judge_mode}")
+    print(f"judge_model: {args.judge_model}")
+    print(f"task_judge_strategy: {args.task_judge_strategy}")
+    print(f"attack_judge_strategy: {args.attack_judge_strategy}")
 
     main_fn(config)
     
@@ -109,7 +117,7 @@ def main():
     )
 
     parser.add_argument(
-        "--output_path",
+        "--results_path",
         type=str,
         default=None,
         help="Path to results output file (default: derived from experiment name)"
@@ -120,6 +128,37 @@ def main():
         type=int,
         default=1,
         help="Number of independent trials"
+    )
+
+    parser.add_argument(
+    "--judge_mode",
+    type=str,
+    default="off",
+    choices=["off", "fake", "real"],
+    help="Optional evaluation judge backend"
+)
+
+    parser.add_argument(
+        "--judge_model",
+        type=str,
+        default="meta-llama/Llama-3.1-8B-Instruct",
+        help="Model name used for judging"
+    )
+
+    parser.add_argument(
+        "--task_judge_strategy",
+        type=str,
+        default="rule",
+        choices=["rule", "judge", "hybrid"],
+        help="How task correctness is scored"
+    )
+        
+    parser.add_argument(
+        "--attack_judge_strategy",
+        type=str,
+        default="rule",
+        choices=["rule", "judge", "hybrid"],
+        help="How attack success is scored"
     )
 
     args = parser.parse_args()

@@ -24,7 +24,6 @@ class MemoryStore:
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump({"entries": entries}, f, indent=2)
 
-
     # Remove any malicious entries from memory
     def reset_poison(self) -> None:
         entries = self.load()

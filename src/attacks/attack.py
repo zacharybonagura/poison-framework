@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, Dict, Callable, Optional
-from attacks.success_checker import SuccessChecker
+from typing import Any, Dict, List, Optional
+from agent.tool import Tool
+from attacks.output_checker import OutputChecker
+
 # ENUM for Poisoning Scope
 class PoisoningScope(Enum):
     SINGLE_INSTANCE = auto()
@@ -12,8 +14,8 @@ class AttackTarget(Enum):
     PROMPT = auto()
     REASONING = auto()
     TOOL_INTERFACE = auto()
-    GOAL = auto()
     MEMORY_RETRIEVAL = auto()
+    ACTION_POLICY = auto()
 
 # Abstract base class for all poisoning attacks
 class Attack(ABC):  
@@ -21,16 +23,17 @@ class Attack(ABC):
         self,
         name: str,
         target: AttackTarget,
-        success_checker: SuccessChecker,
+        success_checker: OutputChecker,
         scope: PoisoningScope,
-        trigger: Optional[str] = None
+        trigger: Optional[str] = None,
+        judge_spec: Optional[Dict[str, Any]] = None,
     ):
         self.name = name
         self.target = target
         self.success_checker = success_checker
         self.scope = scope
         self.trigger = trigger
-        
+        self.judge_spec = judge_spec
 
     # Inject poisoning into the agent context before execution
     # This is the only method allowed to modify context
@@ -44,7 +47,7 @@ class Attack(ABC):
         if self.trigger is None:
             return True
 
-        return self.trigger in str(context)
+        return self.trigger in str(context.get("user_input", ""))
     
     # Return poisoned data to store in long-term memory 
     #       (Overridden by persistant attacks)
@@ -57,6 +60,14 @@ class Attack(ABC):
     def detect_success(self, output: str) -> bool:
         return self.success_checker(output)
 
+    # These functions allow attackers to modify tool descriptions, but are not required to do so
+    def modify_tool_descriptions(self, tools: List[Tool]) -> List[Tool]:
+        return tools
+    
+    # This returns True if the attack can use an LLM-as-a-judge to determine success
+    def has_judge(self) -> bool:
+        return self.judge_spec is not None
+    
     # Returns information for current attack to log experiments
     def metadata(self) -> Dict[str, Any]:
         return {
